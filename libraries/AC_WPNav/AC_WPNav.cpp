@@ -1,5 +1,6 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AC_WPNav.h"
+#include "../ArduCopter/Copter.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -11,6 +12,8 @@ extern const AP_HAL::HAL& hal;
 #define WPNAV_WP_SPEED_UP               250.0f      // default maximum climb velocity
 #define WPNAV_WP_SPEED_DOWN             150.0f      // default maximum descent velocity
 #define WPNAV_WP_ACCEL_Z_DEFAULT        100.0f      // default vertical acceleration between waypoints in cm/s/s
+#define WPNAV_COORDINATE_WE             0.00f           
+#define WPNAV_COORDINATE_NS             0.00f 
 
 const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     // index 0 was used for the old orientation matrix
@@ -92,6 +95,17 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("TER_MARGIN",  12, AC_WPNav, _terrain_margin, 10.0),
 
+    AP_GROUPINFO("COOR_WE",   13, AC_WPNav, _corect_coordinate_we, WPNAV_COORDINATE_WE),
+    AP_GROUPINFO("COOR_NS",   14, AC_WPNav, _corect_coordinate_ns, WPNAV_COORDINATE_NS),
+    AP_GROUPINFO("SPRAY_ALL",   15, AC_WPNav, _spray_all, 0),
+    AP_GROUPINFO("FAST_TURN",   16, AC_WPNav, _fast_turn, 0),
+    AP_GROUPINFO("PWM_NOZZLE",   17, AC_WPNav, _pwm_nozzle , 55),
+    AP_GROUPINFO("PWM_PUMP",   18, AC_WPNav, _pwm_pump , 25),
+    AP_GROUPINFO("SENSOR_PIN",   19, AC_WPNav, _sensor_pin , 60),
+    AP_GROUPINFO("HAS_OA_RD",   20, AC_WPNav, _has_oaradar , 0),
+    AP_GROUPINFO("RADIO_TYPE",   21, AC_WPNav, _radio_type , 10),
+    AP_GROUPINFO("YAW_OA",   22, AC_WPNav, _yaw_oa_rate , 150),
+
     AP_GROUPEND
 };
 
@@ -115,6 +129,11 @@ AC_WPNav::AC_WPNav(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosC
     _last_wp_speed_cms = _wp_speed_cms;
     _last_wp_speed_up_cms = _wp_speed_up_cms;
     _last_wp_speed_down_cms = get_default_speed_down();
+}
+
+void AC_WPNav::reset_param_on_start_mission(){ // in case the drone land and new mission?
+    _flags_change_alt_by_pilot =false;
+    _pilot_clime_cm = 0.0f;
 }
 
 // get expected source of terrain data if alt-above-terrain command is executed (used by Copter's ModeRTL)
@@ -188,6 +207,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
         get_wp_stopping_point(stopping_point);
     }
     _origin = _destination = stopping_point;
+    _origin.z = _destination.z =  stopping_point.z;
     _terrain_alt = false;
     _this_leg_is_spline = false;
 
@@ -327,6 +347,12 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     // update destination
     _destination = destination;
     _terrain_alt = terrain_alt;
+    // reset clime alt and wait for pilot throttle cmd again
+    _pilot_clime_cm = 0.00f;
+    if(copter.mode_auto.mission.get_current_nav_index() >= 2 && copter.get_mode()!=6 ){ // not to do in RTL 
+        _destination.y = _destination.y+(_corect_coordinate_we * 100);
+        _destination.x = _destination.x+(_corect_coordinate_ns * 100);
+    }
 
     if (_flags.fast_waypoint && !_this_leg_is_spline && !_next_leg_is_spline && !_scurve_next_leg.finished()) {
         _scurve_this_leg = _scurve_next_leg;
@@ -359,7 +385,12 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain
         return true;
     }
 
-    _scurve_next_leg.calculate_track(_destination, destination,
+        Vector3f next_dest = destination;
+    if(copter.mode_auto.mission.get_current_nav_index() > 1 /*not takeoff*/ && copter.get_mode()!=6 ){ // not to do in RTL 
+        next_dest.y = next_dest.y+(_corect_coordinate_we * 100);
+        next_dest.x = next_dest.x+(_corect_coordinate_ns * 100);
+    }
+    _scurve_next_leg.calculate_track(_destination, next_dest,
                                      _pos_control.get_max_speed_xy_cms(), _pos_control.get_max_speed_up_cms(), _pos_control.get_max_speed_down_cms(),
                                      get_wp_acceleration(), _wp_accel_z_cmss,
                                      _scurve_snap * 100.0f, _scurve_jerk * 100.0);
@@ -447,6 +478,32 @@ void AC_WPNav::get_wp_stopping_point(Vector3f& stopping_point) const
 /// advance_wp_target_along_track - move target location along track from origin to destination
 bool AC_WPNav::advance_wp_target_along_track(float dt)
 {
+    /* BREAKPOINT resuming when empty tank*/
+    if(copter.mode_auto.mission.state() != 0){ // we don't want code to run at RTL because it use wpnav controller too
+        if(copter.mode_auto.mission.get_current_nav_index() == 2){ //get the last waypoint location.
+            copter.mode_auto.mission.get_item(copter.mode_auto.mission.num_commands() - 1,copter.userCode.current_mission_waypoint_finish_point);
+        }
+        copter.ahrs.get_location(copter.userCode.mission_breakpoint); // assigning current post to mission_breakpoint
+        copter.userCode.current_mission_length = copter.mode_auto.mission.num_commands(); // total command + 1
+        copter.userCode.current_mission_index = copter.mode_auto.mission.get_current_nav_index();
+        //if (copter.mode_auto.mission.get_current_nav_index() > 1 ) {
+            //traveled_distance = get_traveled_distance(); // TODO break more than 2 time in the same mission will cause the travel distance short
+            //gcs().send_text(MAV_SEVERITY_INFO, "sitha: =>cover %i", copter.current_mission_waypoint_finish_point.x);
+            //wp_bearing = get_wp_bearing_origin_destination();
+        //}
+    }
+
+    /* PUMPSPINNER speed change detector: pump and spinner only at spray time or will spray all the time */
+    if(_radio_type == 12){
+        if(copter.userCode.rc6_pwm != _pwm_pump){
+            if (copter.userCode.cmd_16_index % 2 == 0 && copter.userCode.cmd_16_index > 1&& copter.mode_auto.mission.state()==1) copter.userCode.set_pump_spinner_pwm(true);
+        }
+    }else{
+        if (copter.userCode.rc6_pwm != RC_Channels::get_radio_in(5) or copter.userCode.rc8_pwm != RC_Channels::get_radio_in(7) ){
+            if (copter.userCode.cmd_16_index % 2 == 0 && copter.userCode.cmd_16_index > 1&& copter.mode_auto.mission.state()==1) copter.userCode.set_pump_spinner_pwm(true);
+        }
+
+    }
     // calculate terrain adjustments
     float terr_offset = 0.0f;
     if (_terrain_alt && !get_terrain_offset(terr_offset)) {
@@ -517,8 +574,44 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     target_accel *= sq(vel_scaler_dt);
     target_accel += accel_offset;
 
+        /* ALT: Altitude*/
+    int32_t throttle_val = copter.channel_throttle->get_radio_in();
+    
+    // positive throttle
+    if (throttle_val > 1550 ){
+        if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
+        // test with SITL carefull with throttle not come back to 1500
+        // limit height 20m up only Test with and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going up
+        _pilot_clime_cm < 2000 ? _pilot_clime_cm = (_pilot_clime_cm + ((float)throttle_val/5000)) : _pilot_clime_cm;
+    }
+    // negative throttle
+    else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
+        if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
+        // limit height -10monly
+        // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
+        _pilot_clime_cm = (_pilot_clime_cm - 0.3);
+    }
+    // mid stick 
+    else if (throttle_val > 1450  && throttle_val < 1510){
+        // if we set like this, it is going to be reverted to original alt which copter stay at mission alt
+        // so this should comment out. 
+        // _pilot_clime_cm = 0.0f;
+        // _flags_change_alt_by_pilot= false;
+    }
     // convert final_target.z to altitude above the ekf origin
-    target_pos.z += _pos_control.get_pos_offset_z_cm();
+    target_pos.z += _pos_control.get_pos_offset_z_cm(); // offset is 0 most of the time.
+    
+    if(_flags_change_alt_by_pilot){
+        target_pos.z = target_pos.z + _pilot_clime_cm;
+        _wpnav_new_alt  = target_pos.z;
+        _destination.z = target_pos.z;
+    }
+    if(wpnav_pos_loop > 250){ 
+        // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => pos_z %f",target_pos.z);
+        wpnav_pos_loop = 0;
+    }
+    wpnav_pos_loop +=1;
+
     target_vel.z += _pos_control.get_vel_offset_z_cms();
     target_accel.z += _pos_control.get_accel_offset_z_cmss();
 

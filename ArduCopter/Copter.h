@@ -180,6 +180,11 @@
 
 #include "mode.h"
 
+// User variables
+#ifdef USERHOOK_VARIABLES
+# include USERHOOK_VARIABLES
+#endif
+
 class Copter : public AP_Vehicle {
 public:
     friend class GCS_MAVLINK_Copter;
@@ -226,11 +231,13 @@ public:
     friend class ModeZigZag;
     friend class ModeAutorotate;
     friend class ModeTurtle;
+    friend class AC_WPNav;
+    friend class UserCode;
 
     Copter(void);
 
 private:
-
+    UserCode userCode;
     // key aircraft parameters passed to multiple libraries
     AP_Vehicle::MultiCopter aparm;
 
@@ -263,6 +270,7 @@ private:
         int16_t alt_cm_glitch_protected;    // last glitch protected altitude
         int8_t glitch_count;    // non-zero number indicates rangefinder is glitching
         uint32_t glitch_cleared_ms; // system time glitch cleared
+        float terrain_offset_cm;    // filtered terrain offset (e.g. terrain's height above EKF origin)
     } rangefinder_state, rangefinder_up_state;
 
     // return rangefinder height interpolated using inertial altitude
@@ -335,10 +343,6 @@ private:
     GCS_Copter _gcs; // avoid using this; use gcs()
     GCS_Copter &gcs() { return _gcs; }
 
-    // User variables
-#ifdef USERHOOK_VARIABLES
-# include USERHOOK_VARIABLES
-#endif
 
     // Documentation of GLobals:
     typedef union {
@@ -897,6 +901,7 @@ private:
     void init_rangefinder(void);
     void read_rangefinder(void);
     bool rangefinder_alt_ok() const;
+    void update_rangefinder_terrain_offset();
     bool rangefinder_up_ok() const;
     void update_optical_flow(void);
 

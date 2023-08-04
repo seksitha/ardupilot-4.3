@@ -212,6 +212,27 @@ public:
     float crosstrack_error() const { return _pos_control.crosstrack_error();}
 
     static const struct AP_Param::GroupInfo var_info[];
+    
+    AP_Int8     _sensor_pin;
+    AP_Float    _corect_coordinate_we;
+    AP_Float    _corect_coordinate_ns;
+    AP_Int8     _spray_all;
+    AP_Int8     _fast_turn;
+    bool        _flags_change_alt_by_pilot = false;
+    float       _pilot_clime_cm = 0.00f;
+    float       _wpnav_new_alt = 0.00f;
+    float       traveled_distance;
+    Location    origin_for_breakpoint;
+    int32_t     wp_bearing;
+    AP_Int8     _radio_type;
+    bool        loiter_state_after_mission_completed = false;
+    bool        break_auto_by_user_state = false;
+    AP_Int32    _pwm_nozzle;
+    AP_Int32    _pwm_pump;
+     uint8_t      wpnav_pos_loop = 0;
+    void reset_param_on_start_mission();
+    AP_Int8    _has_oaradar;
+    AP_Int32   _yaw_oa_rate;
 
 protected:
 
@@ -233,6 +254,7 @@ protected:
     const AC_AttitudeControl& _attitude_control;
 
     // parameters
+
     AP_Float    _wp_speed_cms;          // default maximum horizontal speed in cm/s during missions
     AP_Float    _wp_speed_up_cms;       // default maximum climb rate in cm/s
     AP_Float    _wp_speed_down_cms;     // default maximum descent rate in cm/s

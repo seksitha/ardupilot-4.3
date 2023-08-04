@@ -210,7 +210,7 @@ public:
         float release_length;   // cable distance to unwind in meters, negative numbers to wind in cable
         float release_rate;     // release rate in meters/second
     };
-
+    bool mission_uploaded_success_state = false;
     // Scripting command structure
     struct PACKED scripting_Command {
         float p1;

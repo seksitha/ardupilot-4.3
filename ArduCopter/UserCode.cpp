@@ -64,7 +64,7 @@ void Copter::userhook_SlowLoop()
         // uint16_t flow_val = hal.gpio->read(54); //       v5+
 
         if (userCode.sensor_loop_index >= 25){
-            gcs().send_text(MAV_SEVERITY_INFO, "sensor val %i", flow_val);
+            gcs().send_text(MAV_SEVERITY_INFO, "sensor %s", flow_val==0? "on":"off");
             userCode.sensor_loop_index = 0;
         }
         userCode.sensor_loop_index = userCode.sensor_loop_index + 1;

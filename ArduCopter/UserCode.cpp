@@ -57,18 +57,7 @@ void Copter::userhook_SlowLoop()
 {
     // put your 3.3Hz code here
 
-    // read value of level sensor
-    if (RC_Channels::get_radio_in(9) > 1500){
-        //uint16_t flow_val = copter.wp_nav->readFlowSensor(60);
-        uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5
-        // uint16_t flow_val = hal.gpio->read(54); //       v5+
 
-        if (userCode.sensor_loop_index >= 25){
-            gcs().send_text(MAV_SEVERITY_INFO, "sensor %s", flow_val==0? "on":"off");
-            userCode.sensor_loop_index = 0;
-        }
-        userCode.sensor_loop_index = userCode.sensor_loop_index + 1;
-    }
 
     /*FLOWSENSOR */
     if(get_mode()==3 && userCode.cmd_16_index > 1){
@@ -107,17 +96,18 @@ void Copter::userhook_SlowLoop()
         }
     }
 
-    if (RC_Channels::get_radio_in(9) > 1500){
-        //uint16_t flow_val = copter.wp_nav->readFlowSensor(60);
-        uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5
-        // uint16_t flow_val = hal.gpio->read(54); //       v5+
-
-        if (userCode.sensor_loop_index >= 25){
-            gcs().send_text(MAV_SEVERITY_INFO, "sensor val %i", flow_val);
-            userCode.sensor_loop_index = 0;
-        }
-        userCode.sensor_loop_index = userCode.sensor_loop_index + 1;
+    // gcs().send_text(MAV_SEVERITY_INFO, "_______missionState %i ",mode_auto.mission.state());
+    /*(Done) misison complete loiter and stop spray*/ 
+    if(mode_auto.mission.state() == 2 and copter.wp_nav->loiter_state_after_mission_completed == false && copter.get_mode()==3 && motors->armed()){
+        copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
+        userCode.set_pump_spinner_pwm(false);   
+        copter.wp_nav->loiter_state_after_mission_completed = true;
     }
+    // stop spray on RTL when has water
+    if(copter.get_mode()==6 && motors->armed()){
+        userCode.set_pump_spinner_pwm(false);   
+    }
+    // 
 }
 #endif
 
@@ -151,18 +141,21 @@ void Copter::userhook_SuperSlowLoop()
             userCode.set_pump_spinner_pwm(false);         
         }
     }
-    // gcs().send_text(MAV_SEVERITY_INFO, "_______missionState %i ",mode_auto.mission.state());
-    /*(Done) misison complete loiter and stop spray*/ 
-    if(mode_auto.mission.state() == 2 and copter.wp_nav->loiter_state_after_mission_completed == false){
-        copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
-        userCode.set_pump_spinner_pwm(false);   
-        copter.wp_nav->loiter_state_after_mission_completed = true;
+
+        // read value of level sensor
+    if (RC_Channels::get_radio_in(9) > 1500){
+        //uint16_t flow_val = copter.wp_nav->readFlowSensor(60);
+        uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5
+        // uint16_t flow_val = hal.gpio->read(54); //       v5+
+
+        if (userCode.sensor_loop_index >= 2){
+            gcs().send_text(MAV_SEVERITY_INFO, "Sensor %s", flow_val==0? "on":"off");
+            userCode.sensor_loop_index = 0;
+        }
+        userCode.sensor_loop_index = userCode.sensor_loop_index + 1;
     }
-    // stop spray on RTL when has water
-    if(copter.get_mode()==6 && motors->armed()){
-        userCode.set_pump_spinner_pwm(false);   
-    }
-    // 
+    
+    
     // MISSIONBREAKPOINT code start here.
     if( copter.get_mode() == 3 && mode_auto.mission.mission_uploaded_success_state ){
         mode_auto.mission.mission_uploaded_success_state = false;

@@ -37,6 +37,7 @@ private:
     int32_t last_recv_id = -1;
 
     AP_Int32 snr_min;
+    AP_Int8 check_id;
     AP_Int32 receive_id;
 
     static Benewake_MultiCAN *multican;

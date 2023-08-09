@@ -230,13 +230,13 @@ const AP_GPS_UBLOX::config_list AP_GPS_UBLOX::config_MB_Rover_uart2[] {
   and also disable Glonass and enable QZSS
  */
 const AP_GPS_UBLOX::config_list AP_GPS_UBLOX::config_M10[] {
- { ConfigKey::CFG_SIGNAL_BDS_ENA, 1},
- { ConfigKey::CFG_SIGNAL_BDS_B1_ENA, 0},
- { ConfigKey::CFG_SIGNAL_BDS_B1C_ENA, 1},
- { ConfigKey::CFG_SIGNAL_GLO_ENA, 0},
- { ConfigKey::CFG_SIGNAL_QZSS_ENA, 1},
- { ConfigKey::CFG_SIGNAL_QZSS_L1CA_ENA, 1},
- { ConfigKey::CFG_SIGNAL_QZSS_L1S_ENA, 1},
+//  { ConfigKey::CFG_SIGNAL_BDS_ENA, 1},
+//  { ConfigKey::CFG_SIGNAL_BDS_B1_ENA, 0},
+//  { ConfigKey::CFG_SIGNAL_BDS_B1C_ENA, 1},
+//  { ConfigKey::CFG_SIGNAL_GLO_ENA, 0},
+//  { ConfigKey::CFG_SIGNAL_QZSS_ENA, 1},
+//  { ConfigKey::CFG_SIGNAL_QZSS_L1CA_ENA, 1},
+//  { ConfigKey::CFG_SIGNAL_QZSS_L1S_ENA, 1},
  { ConfigKey::CFG_NAVSPG_DYNMODEL, 8}, // Air < 4g
 };
 
@@ -430,6 +430,9 @@ AP_GPS_UBLOX::_request_next_config(void)
             const config_list *list = config_M10;
             const uint8_t list_length = ARRAY_SIZE(config_M10);
             Debug("Sending M10 settings");
+            // BDS B1L + SBAS old version
+            const uint8_t buf[]={0xB5,0x62,0x06,0x8A,0x1D,0x00,0x01,0x01,0x00,0x00,0x20,0x00,0x31,0x10,0x01,0x22,0x00,0x31,0x10,0x01,0x0F,0x00,0x31,0x10,0x00,0x0D,0x00,0x31,0x10,0x01,0x21,0x00,0x11,0x20,0x08,0x6E,0xB6};
+            port->write(buf,sizeof(buf));
             if (!_configure_config_set(list, list_length, CONFIG_M10, UBX_VALSET_LAYER_RAM | UBX_VALSET_LAYER_BBR)) {
                 _next_message--;
             }

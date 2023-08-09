@@ -297,6 +297,8 @@ void Copter::check_vibration()
             vibration_check.start_ms = 0;
             vibration_check.high_vibes = false;
             pos_control->set_vibe_comp(false);
+            set_mode_land_with_pause(ModeReason::FAILSAFE);
+            mode_land.do_not_use_GPS();
             vibration_check.clear_ms = 0;
             AP::logger().Write_Error(LogErrorSubsystem::FAILSAFE_VIBE, LogErrorCode::FAILSAFE_RESOLVED);
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Vibration compensation OFF");

@@ -4,7 +4,7 @@
 #include <AP_HAL/utility/sparse-endian.h>
 
 #if AP_RANGEFINDER_BENEWAKE_CAN_ENABLED
-
+const AP_HAL::HAL& hal_p = AP_HAL::get_HAL();  
 const AP_Param::GroupInfo AP_RangeFinder_Benewake_CAN::var_info[] = {
 
     // @Param: RECV_ID
@@ -20,6 +20,8 @@ const AP_Param::GroupInfo AP_RangeFinder_Benewake_CAN::var_info[] = {
     // @Range: 0 65535
     // @User: Advanced
     AP_GROUPINFO("SNR_MIN", 11, AP_RangeFinder_Benewake_CAN, snr_min, 0),
+    AP_GROUPINFO("CHK_ID", 12, AP_RangeFinder_Benewake_CAN, check_id, 0),
+    
 
     AP_GROUPEND
 };
@@ -93,9 +95,13 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame_H30(AP_HAL::CANFrame &frame)
 bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
 {
     WITH_SEMAPHORE(_sem);
+    // benewake Can id = 589826
+    // RFx24 id = 214 new alt_rada
+    const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
+    // if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO," s_id %li",id); //0x00 can_h
     if (frame.isExtended()) {
         // H30 radar uses extended frames
-        const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
+         // receive_id.get() this method is geting id from Param set
         if (receive_id != 0 && id != receive_id.get()) {
             // incorrect receive ID
             return false;
@@ -105,10 +111,10 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
             return false;
         }
         last_recv_id = id;
+        //  if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"ext id %li",id); //0x00 can_h
         return handle_frame_H30(frame);
     }
 
-    const uint16_t id = frame.id & AP_HAL::CANFrame::MaskStdID;
     if (receive_id != 0 && id != uint16_t(receive_id.get())) {
         // incorrect receive ID
         return false;
@@ -118,16 +124,28 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         return false;
     }
     last_recv_id = id;
-
-    const uint16_t dist_cm = le16toh_ptr(&frame.data[0]);
-    const uint16_t snr = le16toh_ptr(&frame.data[2]);
-    if (snr_min != 0 && snr < uint16_t(snr_min.get())) {
+    //  if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
+    const uint16_t dist_cm = (frame.data[5]);
+    const uint16_t cksum = (frame.data[3]+frame.data[4]+frame.data[5]+frame.data[6]) ;
+    
+    if ((cksum) == frame.data[7]) {
         // too low signal strength
+        _distance_sum_cm += dist_cm ;
+        _distance_count++;
         return true;
     }
-    _distance_sum_cm += dist_cm;
-    _distance_count++;
-    return true;
+
+    // hal.console->printf("d0 0x%02hhx \n", frame.data[0]); //5A
+    // hal.console->printf("d1 0x%02hhx \n", frame.data[1]); //A5
+    // hal.console->printf("d2 0x%02hhx \n", frame.data[2]); //len
+    // hal.console->printf("d3 0x%02hhx \n", frame.data[3]); //0xf3 can_l
+    // hal.console->printf("d1 %f \n", _distance_sum_cm);
+    // gcs().send_text(MAV_SEVERITY_INFO,"d4 0x%02hhx \n", frame.data[4]); //0x00 can_h
+    // hal.console->printf("d5 0x%02hhx \n", frame.data[5]); //0x3f dbf
+    // hal.console->printf("d6 0x%02hhx \n", frame.data[6]); //0x00 resv
+    // hal.console->printf("d7 0x%02hhx \n", frame.data[7]); //0x32 cksum 0xf3+0x00+0x3f=0x32
+
+    return false;
 }
 
 // handle frames from CANSensor, passing to the drivers

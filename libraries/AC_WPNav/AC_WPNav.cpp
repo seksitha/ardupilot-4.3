@@ -509,24 +509,14 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     if (_terrain_alt && !get_terrain_offset(terr_offset)) {
         return false;
     }
-    const float offset_z_scaler = _pos_control.pos_offset_z_scaler(terr_offset, get_terrain_margin() * 100.0);
 
+    const float offset_z_scaler = _pos_control.pos_offset_z_scaler(terr_offset, get_terrain_margin() * 100.0);
     // input shape the terrain offset
-    //_pos_control.update_pos_offset_z(terr_offset);
+    // Sitha: terrain is use at the code bellow target_pos.z but we don't want that we want to overwrite current ekf alt
+    //_pos_control.update_pos_offset_z(terr_offset); 
 
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
     const Vector3f &curr_pos = _inav.get_position_neu_cm() - Vector3f{0, 0, terr_offset};
-    if(copter.rangefinder_state.alt_healthy && copter.rangefinder_state.enabled == true && copter.rangefinder.has_orientation(ROTATION_PITCH_270)){ // take this from RC_chanel when chanel high
-        const float rngfnd_alt_cm = copter.rangefinder_state.alt_cm_filt.get();
-        // gcs().send_text(MAV_SEVERITY_INFO,"RFD_ALT__ %f", rngfnd_alt_cm);
-        // _pos_target.z = _inav.get_position_z_up_cm(); // Sitha: ardupilot use rangfinder to offset this we need a way to overide this by use RNGFND directly
-        // pos_control.update_pos_offset_z(terr_offset); // htis only compensate rngfnd alt so if GPS drit rngfnd does much help
-        // luckily pos_control has set_pos_target_z_cm() to be
-        _pos_control.set_pos_target_z_cm(rngfnd_alt_cm);
-    }else {
-        // we dont need this because in already set in pos_control.init_...()
-        //_pos_control.set_pos_target_z_cm(_inav.get_position_z_up_cm());
-    }
     Vector3f curr_target_vel = _pos_control.get_vel_desired_cms();
     curr_target_vel.z -= _pos_control.get_vel_offset_z_cms();
 
@@ -623,7 +613,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     }
     wpnav_pos_loop +=1;
 
-    target_pos.z += _pos_control.get_pos_offset_z_cm(); // offset is 0 most of the time.
+    // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't this
     target_vel.z += _pos_control.get_vel_offset_z_cms();
     target_accel.z += _pos_control.get_accel_offset_z_cmss();
 

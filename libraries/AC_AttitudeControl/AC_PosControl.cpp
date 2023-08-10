@@ -912,7 +912,7 @@ bool AC_PosControl::is_active_z() const
 ///     Position and velocity errors are converted to velocity and acceleration targets using PID objects
 ///     Desired velocity and accelerations are added to these corrections as they are calculated
 ///     Kinematically consistent target position and desired velocity and accelerations should be provided before calling this function
-void AC_PosControl::update_z_controller()
+void AC_PosControl::update_z_controller(float rngfnd)
 {
     // check for ekf z-axis position reset
     handle_ekf_z_reset();
@@ -928,9 +928,9 @@ void AC_PosControl::update_z_controller()
     _last_update_z_us = AP::ins().get_last_update_usec();
 
     // calculate the target velocity correction
-    float pos_target_zf = _pos_target.z;
-
-    _vel_target.z = _p_pos_z.update_all(pos_target_zf, _inav.get_position_z_up_cm());
+    float pos_target_zf = _pos_target.z; // wpnav_ set pos target by set_pos_vel_accel()
+    
+    _vel_target.z = _p_pos_z.update_all(pos_target_zf /*target*/, rngfnd > 0 ? rngfnd : _inav.get_position_z_up_cm() /* input to compare*/);
     _vel_target.z *= AP::ahrs().getControlScaleZ();
 
     _pos_target.z = pos_target_zf;

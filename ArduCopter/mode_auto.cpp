@@ -983,9 +983,23 @@ void ModeAuto::wp_run()
     // run waypoint controller
     copter.failsafe_terrain_set_status(wp_nav->update_wpnav());
 
+    // Sitha: attempt to overwrite the atl of EKF_origin with RangFinder.
+    if(copter.rangefinder_state.alt_healthy && copter.rangefinder_state.enabled == true && copter.rangefinder.has_orientation(ROTATION_PITCH_270)){ // take this from RC_chanel when chanel high
+        const float rngfnd_alt_cm = copter.rangefinder_state.alt_cm_filt.get();
+        // gcs().send_text(MAV_SEVERITY_INFO,"RFD_ALT__ %f", rngfnd_alt_cm);
+        // _pos_target.z = _inav.get_position_z_up_cm(); // Sitha: ardupilot use rangfinder to offset this we need a way to overide this by use RNGFND directly
+        // pos_control.update_pos_offset_z(terr_offset); // htis only compensate rngfnd alt so if GPS drit rngfnd does much help
+        // luckily pos_control has set_pos_target_z_cm() to be
+        pos_control->update_z_controller(rngfnd_alt_cm);
+    }else {
+        // we dont need this because in already set in pos_control.init_...()
+        //_pos_control.set_pos_target_z_cm(_inav.get_position_z_up_cm());
+         pos_control->update_z_controller(0);
+    }
+
     // WP_Nav has set the vertical position control targets
     // run the vertical position controller and set output throttle
-    pos_control->update_z_controller();
+    // pos_control->update_z_controller(); // _pos_target.z is used here but were set to _inav.get_position_z_up_cm() 
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {

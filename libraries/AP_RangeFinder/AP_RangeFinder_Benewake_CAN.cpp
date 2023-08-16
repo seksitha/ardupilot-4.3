@@ -98,7 +98,10 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
     // benewake Can id = 589826
     // RFx24 id = 214 new alt_rada
     const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
-    // if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO," s_id %li",id); //0x00 can_h
+    #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+        if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO," s_id %li",id); //0x00 can_h
+    #endif
+    
     if (frame.isExtended()) {
         // H30 radar uses extended frames
          // receive_id.get() this method is geting id from Param set
@@ -111,7 +114,9 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
             return false;
         }
         last_recv_id = id;
-        //  if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"ext id %li",id); //0x00 can_h
+        #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+            if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"ext id %li",id); //0x00 can_h
+        #endif
         return handle_frame_H30(frame);
     }
 
@@ -124,7 +129,9 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         return false;
     }
     last_recv_id = id;
-    //  if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
+    #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+        if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
+    #endif
     const uint16_t dist_cm = (frame.data[5]);
     const uint16_t cksum = (frame.data[3]+frame.data[4]+frame.data[5]+frame.data[6]) ;
     

@@ -129,7 +129,7 @@ void Copter::userhook_SuperSlowLoop()
     }
     // switch the pump on by RC
     if (copter.get_mode()!=3 /*not auto*/ && userCode.chan_pump && userCode.chan_spinner && userCode.pump_off_on_boot){
-        if (RC_Channels::get_radio_in(6) > 1500){
+        if (RC_Channels::get_radio_in(6) > 1550){
             uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5 pin 60
             // uint16_t flow_val = hal.gpio->read(54); //       v5+
             if(flow_val == 0){

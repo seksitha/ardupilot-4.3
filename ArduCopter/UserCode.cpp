@@ -62,18 +62,22 @@ void Copter::userhook_SlowLoop()
     /*FLOWSENSOR */
     if(get_mode()==3 && userCode.cmd_16_index > 1){
         // not to trigger the flow sensor at the beginning of the mission.
-        uint8_t delay_monitor_flow = 40;
-        if (userCode.cmd_16_index % 2 != 0) {
+        
+        uint8_t delay_monitor_flow = 6; // base on loop frequency we want to delay 2 second. 
+        if (userCode.cmd_16_index % 2 != 0) { //mission 2 is the start spray so index is 1 we reset the monitor flow
             userCode.mission_timer_not_to_monitor_flow_at_start_waypoint = 0;
             return;
         }
+        //mission 3 is the start spray so index is 2 we delay some time before tricker the empty tank
         if( userCode.cmd_16_index % 2 == 0  && userCode.mission_timer_not_to_monitor_flow_at_start_waypoint < delay_monitor_flow) {
             userCode.mission_timer_not_to_monitor_flow_at_start_waypoint = userCode.mission_timer_not_to_monitor_flow_at_start_waypoint + 1;
+            // gcs().send_text(MAV_SEVERITY_INFO, "count %i",userCode.mission_timer_not_to_monitor_flow_at_start_waypoint);
             return;
         }
 
+        // gcs().send_text(MAV_SEVERITY_INFO, "check %i",userCode.cmd_16_index);
         // if empty tank stop copter
-        if (userCode.mission_timer_not_to_monitor_flow_at_start_waypoint >= delay_monitor_flow && RC_Channels::get_radio_in(6) > 1400 ){
+        if (userCode.mission_timer_not_to_monitor_flow_at_start_waypoint >= delay_monitor_flow && RC_Channels::get_radio_in(6) > 1400 ){  //radio chan7 > 1400
             uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5
             // uint16_t flow_val = hal.gpio->read(54); //       v5+
             userCode.flow_value = userCode.flow_value + flow_val ;

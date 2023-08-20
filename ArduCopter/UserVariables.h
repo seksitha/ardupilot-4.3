@@ -25,7 +25,7 @@ class UserCode {
         uint8_t mission_timer_not_to_monitor_flow_at_start_waypoint = 0;
         uint8_t flow_index = 0;
         bool spray_at_16_even = false;
-
+        bool auto_has_been_on_rngfnd = false;
         Location mission_breakpoint;
         mavlink_mission_item_int_t current_mission_waypoint_finish_point;
         

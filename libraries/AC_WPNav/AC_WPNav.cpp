@@ -607,7 +607,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _wpnav_new_alt  = target_pos.z;
         _destination.z = target_pos.z;
     }
-    if(wpnav_pos_loop > 250){ 
+    if(wpnav_pos_loop > 250){  // just for printing some info in slower freq
         // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => pos_z %f",target_pos.z);
         wpnav_pos_loop = 0;
     }

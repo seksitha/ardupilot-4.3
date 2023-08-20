@@ -991,10 +991,19 @@ void ModeAuto::wp_run()
         // pos_control.update_pos_offset_z(terr_offset); // htis only compensate rngfnd alt so if GPS drit rngfnd does much help
         // luckily pos_control has set_pos_target_z_cm() to be
         pos_control->update_z_controller(rngfnd_alt_cm);
-    }else {
-        // we dont need this because in already set in pos_control.init_...()
-        //_pos_control.set_pos_target_z_cm(_inav.get_position_z_up_cm());
-         pos_control->update_z_controller(0);
+        if(copter.userCode.auto_has_been_on_rngfnd == false) copter.userCode.auto_has_been_on_rngfnd = true;
+    
+    // when user switch to turn off radar or radar is bad alt.
+    }else if((copter.rangefinder_state.enabled == false && copter.userCode.auto_has_been_on_rngfnd) || (!copter.rangefinder_state.alt_healthy && copter.userCode.auto_has_been_on_rngfnd)) {
+        // gcs().send_text(MAV_SEVERITY_INFO,"hit1__ ");
+        pos_control->set_pos_target_z_cm(inertial_nav.get_position_z_up_cm());
+        copter.userCode.auto_has_been_on_rngfnd = false;
+        pos_control->update_z_controller(0);
+    // no Rngfnd available
+    } else {
+        //
+       //gcs().send_text(MAV_SEVERITY_INFO,"hit2__ ");
+        pos_control->update_z_controller(0);
     }
 
     // WP_Nav has set the vertical position control targets
@@ -1372,8 +1381,10 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     }else{
         if (copter.userCode.cmd_16_index % 2 == 0 && copter.userCode.cmd_16_index > 1 && mission.state()==1 ) {
             copter.userCode.set_pump_spinner_pwm(true);
+            gcs().send_text(MAV_SEVERITY_INFO, "pump on");
         } 
         if (copter.userCode.cmd_16_index % 2 != 0 || mission.state()==0)  {
+            gcs().send_text(MAV_SEVERITY_INFO, "pump off");
             copter.userCode.set_pump_spinner_pwm(false);
         }
     }

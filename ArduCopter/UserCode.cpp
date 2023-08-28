@@ -9,12 +9,32 @@ void UserCode::set_pump_spinner_pwm(bool spray_state){
     }
     if(spray_state == true){
         if(copter.wp_nav->_radio_type == 12){
+<<<<<<< Updated upstream
             SRV_Channels::set_output_pwm_chan( chan_pump , RC_Channels::get_radio_in(5) > 1080 ? copter.wp_nav->_pwm_pump < 100 ? copter.wp_nav->_pwm_pump*10+1000 : 1950 : 1000);
             SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
         }else{
             if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){
                 rc6_pwm = RC_Channels::get_radio_in(5);
                 rc8_pwm = RC_Channels::get_radio_in(7) > copter.wp_nav->_pwm_nozzle*10+1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
+=======
+
+            if(RC_Channels::get_radio_in(5) > 1600){
+                rc6_pwm =  copter.wp_nav->_pwm_pump < 60 ? (copter.wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;
+            }
+            else if(RC_Channels::get_radio_in(5) > 1150 && RC_Channels::get_radio_in(5) < 1550 ){
+                rc6_pwm = (copter.wp_nav->_pwm_pump + 15) * 10 + 1000;
+            }
+            else if (RC_Channels::get_radio_in(5) < 1150){
+                 rc6_pwm = 1000;
+            } 
+            SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
+            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+
+        }else{
+            if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){
+                rc6_pwm = RC_Channels::get_radio_in(5);
+                rc8_pwm = RC_Channels::get_radio_in(7) > (copter.wp_nav->_pwm_nozzle*10) + 1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
+>>>>>>> Stashed changes
             }
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
             SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm);    
@@ -62,7 +82,11 @@ void Copter::userhook_SlowLoop()
     /*FLOWSENSOR */
     if(get_mode()==3 && userCode.cmd_16_index > 1){
         // not to trigger the flow sensor at the beginning of the mission.
+<<<<<<< Updated upstream
         
+=======
+        userCode.is_print_break_auto = false;
+>>>>>>> Stashed changes
         uint8_t delay_monitor_flow = 6; // base on loop frequency we want to delay 2 second. 
         if (userCode.cmd_16_index % 2 != 0) { //mission 2 is the start spray so index is 1 we reset the monitor flow
             userCode.mission_timer_not_to_monitor_flow_at_start_waypoint = 0;
@@ -101,11 +125,21 @@ void Copter::userhook_SlowLoop()
     }
 
     // gcs().send_text(MAV_SEVERITY_INFO, "_______missionState %i ",mode_auto.mission.state());
+<<<<<<< Updated upstream
     /*(Done) misison complete loiter and stop spray*/ 
+=======
+    /*(Done) misison complete loiter and stop spray
+    // mission complete only call when all mission has been flow , no jump allow.
+    */ 
+>>>>>>> Stashed changes
     if(mode_auto.mission.state() == 2 and copter.wp_nav->loiter_state_after_mission_completed == false && copter.get_mode()==3 && motors->armed()){
         copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
         userCode.set_pump_spinner_pwm(false);   
         copter.wp_nav->loiter_state_after_mission_completed = true;
+<<<<<<< Updated upstream
+=======
+        gcs().send_text(MAV_SEVERITY_INFO, "# Mission Complete");
+>>>>>>> Stashed changes
     }
     // stop spray on RTL when has water
     if(copter.get_mode()==6 && motors->armed()){
@@ -174,66 +208,70 @@ void Copter::userhook_SuperSlowLoop()
     if( !motors->armed() && mode_auto.mission.num_commands() &&  mode_auto.mission.mission_uploaded_success_state == true)
     {   
         // get new mission finish location after resume command hit
-        mavlink_mission_item_int_t new_mission_finish_point ;
-        mode_auto.mission.get_item(mode_auto.mission.num_commands()-1, new_mission_finish_point);
-        // get new mission wapypoint #2 location after resume command hit
-        mavlink_mission_item_int_t new_mission_waypoint_2 ;
-        mode_auto.mission.get_item(2, new_mission_waypoint_2);
-        // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => new %i", new_mission_waypoint_2.x);
-        // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => old %i", userCode.mission_breakpoint.lat);
+        // mavlink_mission_item_int_t new_mission_finish_point ;
+        // mode_auto.mission.get_item(mode_auto.mission.num_commands()-1, new_mission_finish_point);
+        // // get new mission wapypoint #2 location after resume command hit
+        // mavlink_mission_item_int_t new_mission_waypoint_2 ;
+        // mode_auto.mission.get_item(2, new_mission_waypoint_2);
+        // // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => new %i", new_mission_waypoint_2.x);
+        // // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => old %i", userCode.mission_breakpoint.lat);
 
-        /* WE SET breakpoint only if the end point is the same with new upload plan 
-        and the length is sorter than the old one otherwise we can not upload new mission when 
-        user make mistake*/
-        if( userCode.current_mission_waypoint_finish_point.x == new_mission_finish_point.x && 
-            userCode.current_mission_waypoint_finish_point.y == new_mission_finish_point.y &&
-            mode_auto.mission.num_commands() < userCode.current_mission_length )
-        {
-            // gcs().send_text(MAV_SEVERITY_INFO, "sitha=> resume success %i",mode_auto.cmd_16_index );
+        // /* WE SET breakpoint only if the end point is the same with new upload plan 
+        // and the length is sorter than the old one otherwise we can not upload new mission when 
+        // user make mistake*/
+        // if( userCode.current_mission_waypoint_finish_point.x == new_mission_finish_point.x && 
+        //     userCode.current_mission_waypoint_finish_point.y == new_mission_finish_point.y &&
+        //     mode_auto.mission.num_commands() < userCode.current_mission_length )
+        // {
+        //     // gcs().send_text(MAV_SEVERITY_INFO, "sitha=> resume success %i",mode_auto.cmd_16_index );
 
-            // TODO: this algorithm problem at the near of the end wp breakpoint
-            // float PI = 3.14159265f;
-            // float R = 6378137.0f; // Sitha: Earth radius in meter
-            // float half_radian = 180.0f;
+        //     // TODO: this algorithm problem at the near of the end wp breakpoint
+        //     // float PI = 3.14159265f;
+        //     // float R = 6378137.0f; // Sitha: Earth radius in meter
+        //     // float half_radian = 180.0f;
 
-            // // devide by 10+e7 won't work well but multiply by 0.00000001 work well
-            // float lat = (float)(copter.wp_nav->origin_for_breakpoint.lat * 0.0000001f) * PI / half_radian; //convert degree to radian
-            // float lon = (float)(copter.wp_nav->origin_for_breakpoint.lng * 0.0000001f) * PI / half_radian;
+        //     // // devide by 10+e7 won't work well but multiply by 0.00000001 work well
+        //     // float lat = (float)(copter.wp_nav->origin_for_breakpoint.lat * 0.0000001f) * PI / half_radian; //convert degree to radian
+        //     // float lon = (float)(copter.wp_nav->origin_for_breakpoint.lng * 0.0000001f) * PI / half_radian;
 
-            // float brng = (float)(copter.wp_nav->wp_bearing)*0.01f * PI / half_radian;
-            // float d = /*copter.wp_nav->traveled_distance<400 && copter.wp_nav->_fast_turn ? 0.0f :*/  (copter.wp_nav->traveled_distance-70)*0.01f;
-            // float newLat = asinf(sinf(lat) * cosf(d / R) + cosf(lat) * sinf(d / R) * cosf(brng));
-            // float newLon = lon + atan2f(sinf(brng) * sinf(d / R) * cosf(lat), cosf(d / R) - sinf(lat) * sinf(newLat));
-            // float latDegree = newLat * half_radian / PI;
-            // float lonDegree = newLon * half_radian / PI; // result as radian so convert back to degree
-            // new_mission_waypoint_2.x = (int32_t)(latDegree*10000000);
-            // new_mission_waypoint_2.y = (int32_t)(lonDegree*10000000);    
-            // gcs().send_text(MAV_SEVERITY_INFO, "sitha=> resume lat %f, %f brng %f", (float)(copter.wp_nav->origin_for_breakpoint.lat*.0000001f), (float)(copter.wp_nav->origin_for_breakpoint.lng*0.0000001f),(float)copter.wp_nav->wp_bearing*0.01f);
+        //     // float brng = (float)(copter.wp_nav->wp_bearing)*0.01f * PI / half_radian;
+        //     // float d = /*copter.wp_nav->traveled_distance<400 && copter.wp_nav->_fast_turn ? 0.0f :*/  (copter.wp_nav->traveled_distance-70)*0.01f;
+        //     // float newLat = asinf(sinf(lat) * cosf(d / R) + cosf(lat) * sinf(d / R) * cosf(brng));
+        //     // float newLon = lon + atan2f(sinf(brng) * sinf(d / R) * cosf(lat), cosf(d / R) - sinf(lat) * sinf(newLat));
+        //     // float latDegree = newLat * half_radian / PI;
+        //     // float lonDegree = newLon * half_radian / PI; // result as radian so convert back to degree
+        //     // new_mission_waypoint_2.x = (int32_t)(latDegree*10000000);
+        //     // new_mission_waypoint_2.y = (int32_t)(lonDegree*10000000);    
+        //     // gcs().send_text(MAV_SEVERITY_INFO, "sitha=> resume lat %f, %f brng %f", (float)(copter.wp_nav->origin_for_breakpoint.lat*.0000001f), (float)(copter.wp_nav->origin_for_breakpoint.lng*0.0000001f),(float)copter.wp_nav->wp_bearing*0.01f);
 
-            // TODO: calculate offset lat x metters and offset lng x meters // work well, better than above dont know why.
-            float R = 6378137.00000000f;
-            float dlat = copter.wp_nav->_corect_coordinate_ns/R;
-            float dlon = copter.wp_nav->_corect_coordinate_we/(R*cosf(3.14150000f*(float)userCode.mission_breakpoint.lat/10000000/180.00000000f));
-            float correct_breakpoint_lat = ((float)userCode.mission_breakpoint.lat/10000000-(dlat*180/3.14150000f));
-            float correct_breakpoint_lng = ((float)userCode.mission_breakpoint.lng/10000000)-((dlon*180/3.14150000f));
-            new_mission_waypoint_2.x = int32_t(correct_breakpoint_lat*10000000);
-            new_mission_waypoint_2.y = (int32_t)(correct_breakpoint_lng*10000000);
+        //     // TODO: calculate offset lat x metters and offset lng x meters // work well, better than above dont know why.
+        //     float R = 6378137.00000000f;
+        //     float dlat = copter.wp_nav->_corect_coordinate_ns/R;
+        //     float dlon = copter.wp_nav->_corect_coordinate_we/(R*cosf(3.14150000f*(float)userCode.mission_breakpoint.lat/10000000/180.00000000f));
+        //     float correct_breakpoint_lat = ((float)userCode.mission_breakpoint.lat/10000000-(dlat*180/3.14150000f));
+        //     float correct_breakpoint_lng = ((float)userCode.mission_breakpoint.lng/10000000)-((dlon*180/3.14150000f));
+        //     new_mission_waypoint_2.x = int32_t(correct_breakpoint_lat*10000000);
+        //     new_mission_waypoint_2.y = (int32_t)(correct_breakpoint_lng*10000000);
 
-            // in case pilot stop at the side turn don't set break point QGC will take out this wp
-            if(userCode.cmd_16_index % 2 == 0 || copter.wp_nav->_spray_all==1){
-                mode_auto.mission.set_item(2, new_mission_waypoint_2 ); 
-            } 
-            // we set this to false so that it is not doing it again and again 
-            // and when we upload it is not reset out mission
-            mode_auto.mission.mission_uploaded_success_state = false;
-            userCode.cmd_16_index= 0; // don't change this will effect resume waypoint at side turn
-            userCode.current_mission_index = 0;
-        }
+        //     // in case pilot stop at the side turn don't set break point QGC will take out this wp
+        //     if(userCode.cmd_16_index % 2 == 0 || copter.wp_nav->_spray_all==1){
+        //         mode_auto.mission.set_item(2, new_mission_waypoint_2 ); 
+        //     } 
+        //     // we set this to false so that it is not doing it again and again 
+        //     // and when we upload it is not reset out mission
+        //     mode_auto.mission.mission_uploaded_success_state = false;
+        //     userCode.cmd_16_index= 0; // don't change this will effect resume waypoint at side turn
+        //     userCode.current_mission_index = 0;
+        // }
     }
 
     // MISSION break by user and resume / this prevent user fly to somewhere and decide to resume so it resume to breakpoint
-    if(mode_auto.mission.get_current_nav_index() > 1 && copter.get_mode()!=3 && motors->armed()){
+    if(mode_auto.mission.get_current_nav_index() > 1 && copter.get_mode()!=3 && motors->armed() && !userCode.is_print_break_auto){
         copter.wp_nav->break_auto_by_user_state = true;
+        gcs().send_text(MAV_SEVERITY_INFO,"break_lat %ld", userCode.mission_breakpoint.lat );
+        gcs().send_text(MAV_SEVERITY_INFO,"break_lng %ld", userCode.mission_breakpoint.lng );
+        gcs().send_text(MAV_SEVERITY_INFO,"break_set" );
+        userCode.is_print_break_auto = true;
     }
 
     // if (motors->armed() && copter.get_mode()!=3 /*not equal auto*/

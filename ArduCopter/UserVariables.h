@@ -31,6 +31,7 @@ class UserCode {
         
         bool alert_empty_tank = false;
         int16_t cmd_16_index = 0;
+        bool is_print_break_auto = false;
         void set_pump_spinner_pwm(bool spray_state);
 };
 

@@ -1,5 +1,6 @@
 {
     "cSpell.language": "en-GB",
     "astyle.astylerc": "${workspaceFolder}/Tools/CodeStyle/astylerc",
-    "C_Cpp.dimInactiveRegions": false
+    "C_Cpp.dimInactiveRegions": false,
+    "cmake.sourceDirectory": "/Users/sithasek/001_Codes/ardupilot-4.3/libraries/AP_HAL_ESP32/targets/esp-idf"
 }

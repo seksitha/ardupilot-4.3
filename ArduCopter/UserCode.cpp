@@ -19,7 +19,7 @@ void UserCode::set_pump_spinner_pwm(bool spray_state){
                 rc8_pwm = RC_Channels::get_radio_in(7) > copter.wp_nav->_pwm_nozzle*10+1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
 =======
 =======
->>>>>>> Stashed changes
+>>>>>>> Sshed changes
 
             if(RC_Channels::get_radio_in(5) > 1600){
                 rc6_pwm =  copter.wp_nav->_pwm_pump < 60 ? (copter.wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;

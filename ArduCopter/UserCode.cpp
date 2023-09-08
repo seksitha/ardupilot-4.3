@@ -8,44 +8,28 @@ void UserCode::set_pump_spinner_pwm(bool spray_state){
         //gcs().send_text(MAV_SEVERITY_INFO, "spray off");
     }
     if(spray_state == true){
-        if(copter.wp_nav->_radio_type == 12){
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-            SRV_Channels::set_output_pwm_chan( chan_pump , RC_Channels::get_radio_in(5) > 1080 ? copter.wp_nav->_pwm_pump < 100 ? copter.wp_nav->_pwm_pump*10+1000 : 1950 : 1000);
-            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
-        }else{
-            if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){
-                rc6_pwm = RC_Channels::get_radio_in(5);
-                rc8_pwm = RC_Channels::get_radio_in(7) > copter.wp_nav->_pwm_nozzle*10+1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
-=======
-=======
->>>>>>> Sshed changes
-
+       if(wp_nav->_radio_type == 12){
             if(RC_Channels::get_radio_in(5) > 1600){
-                rc6_pwm =  copter.wp_nav->_pwm_pump < 60 ? (copter.wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;
+                rc6_pwm =  wp_nav->_pwm_pump < 60 ? (wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;
             }
             else if(RC_Channels::get_radio_in(5) > 1150 && RC_Channels::get_radio_in(5) < 1550 ){
-                rc6_pwm = (copter.wp_nav->_pwm_pump + 15) * 10 + 1000;
+                rc6_pwm = (wp_nav->_pwm_pump + 15) * 10 + 1000;
             }
             else if (RC_Channels::get_radio_in(5) < 1150){
                  rc6_pwm = 1000;
             } 
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
-            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
-
+            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? wp_nav->_pwm_nozzle < 100 ? wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+        
         }else{
             if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){
                 rc6_pwm = RC_Channels::get_radio_in(5);
-                rc8_pwm = RC_Channels::get_radio_in(7) > (copter.wp_nav->_pwm_nozzle*10) + 1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+                rc8_pwm = RC_Channels::get_radio_in(7) > wp_nav->_pwm_nozzle*10+1000 ? wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
             }
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
             SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm);    
         }
-
+        
         //gcs().send_text(MAV_SEVERITY_INFO, "spray on");
     }
 }
@@ -88,15 +72,7 @@ void Copter::userhook_SlowLoop()
     /*FLOWSENSOR */
     if(get_mode()==3 && userCode.cmd_16_index > 1){
         // not to trigger the flow sensor at the beginning of the mission.
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        
-=======
         userCode.is_print_break_auto = false;
->>>>>>> Stashed changes
-=======
-        userCode.is_print_break_auto = false;
->>>>>>> Stashed changes
         uint8_t delay_monitor_flow = 6; // base on loop frequency we want to delay 2 second. 
         if (userCode.cmd_16_index % 2 != 0) { //mission 2 is the start spray so index is 1 we reset the monitor flow
             userCode.mission_timer_not_to_monitor_flow_at_start_waypoint = 0;
@@ -135,31 +111,15 @@ void Copter::userhook_SlowLoop()
     }
 
     // gcs().send_text(MAV_SEVERITY_INFO, "_______missionState %i ",mode_auto.mission.state());
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    /*(Done) misison complete loiter and stop spray*/ 
-=======
     /*(Done) misison complete loiter and stop spray
     // mission complete only call when all mission has been flow , no jump allow.
     */ 
->>>>>>> Stashed changes
-=======
-    /*(Done) misison complete loiter and stop spray
-    // mission complete only call when all mission has been flow , no jump allow.
-    */ 
->>>>>>> Stashed changes
+
     if(mode_auto.mission.state() == 2 and copter.wp_nav->loiter_state_after_mission_completed == false && copter.get_mode()==3 && motors->armed()){
         copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
         userCode.set_pump_spinner_pwm(false);   
         copter.wp_nav->loiter_state_after_mission_completed = true;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
         gcs().send_text(MAV_SEVERITY_INFO, "# Mission Complete");
->>>>>>> Stashed changes
-=======
-        gcs().send_text(MAV_SEVERITY_INFO, "# Mission Complete");
->>>>>>> Stashed changes
     }
     // stop spray on RTL when has water
     if(copter.get_mode()==6 && motors->armed()){

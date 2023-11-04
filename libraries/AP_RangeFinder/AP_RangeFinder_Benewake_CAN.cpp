@@ -99,7 +99,9 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
     // RFx24 id = 214 new alt_rada
     const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
     #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+        #if !defined(HAL_BUILD_AP_PERIPH)
         if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO," s_id %li",id); //0x00 can_h
+         #endif
     #endif
     
     if (frame.isExtended()) {
@@ -115,7 +117,9 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         }
         last_recv_id = id;
         #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+            #if !defined(HAL_BUILD_AP_PERIPH)
             if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"ext id %li",id); //0x00 can_h
+             #endif
         #endif
         return handle_frame_H30(frame);
     }
@@ -130,7 +134,9 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
     }
     last_recv_id = id;
     #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
+        #if !defined(HAL_BUILD_AP_PERIPH)
         if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
+        #endif
     #endif
     const uint16_t dist_cm = (frame.data[5]);
     const uint16_t cksum = (frame.data[3]+frame.data[4]+frame.data[5]+frame.data[6]) ;

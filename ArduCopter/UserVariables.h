@@ -12,11 +12,13 @@ class UserCode {
 
     public:
         UserCode() = default;
-         uint8_t chan_pump;
-         uint8_t chan_spinner;
+        uint8_t chan_pump;
+        uint8_t chan_spinner;
+        uint8_t chan_spinner2;
+        uint8_t chan_spinner3;
         bool pump_off_on_boot = false;
-         uint16_t rc6_pwm;
-         uint16_t rc8_pwm;
+        uint16_t rc6_pwm;
+        uint16_t rc8_pwm;
         uint16_t current_mission_length;
         uint16_t current_mission_index;
         uint8_t sensor_loop_index = 0;

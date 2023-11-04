@@ -733,7 +733,7 @@ private:
         STEP_M10,
         STEP_LAST
     };
-
+    uint8_t show_all_step = 0;
     // Packet checksum accumulators
     uint8_t         _ck_a;
     uint8_t         _ck_b;

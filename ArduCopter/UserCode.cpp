@@ -5,29 +5,35 @@ void UserCode::set_pump_spinner_pwm(bool spray_state){
     if( spray_state == false) {
         SRV_Channels::set_output_pwm_chan( chan_pump , 1000);
         SRV_Channels::set_output_pwm_chan( chan_spinner , 1000);
+        SRV_Channels::set_output_pwm_chan( chan_spinner2 , 1000);
+        SRV_Channels::set_output_pwm_chan( chan_spinner3 , 1000);
         //gcs().send_text(MAV_SEVERITY_INFO, "spray off");
     }
     if(spray_state == true){
-       if(wp_nav->_radio_type == 12){
+       if(copter.wp_nav->_radio_type == 12){
             if(RC_Channels::get_radio_in(5) > 1600){
-                rc6_pwm =  wp_nav->_pwm_pump < 60 ? (wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;
+                rc6_pwm =  copter.wp_nav->_pwm_pump < 60 ? (copter.wp_nav->_pwm_pump + 30) * 10 + 1000 : 2000;
             }
             else if(RC_Channels::get_radio_in(5) > 1150 && RC_Channels::get_radio_in(5) < 1550 ){
-                rc6_pwm = (wp_nav->_pwm_pump + 15) * 10 + 1000;
+                rc6_pwm = (copter.wp_nav->_pwm_pump + 15) * 10 + 1000;
             }
             else if (RC_Channels::get_radio_in(5) < 1150){
                  rc6_pwm = 1000;
             } 
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
-            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? wp_nav->_pwm_nozzle < 100 ? wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+            SRV_Channels::set_output_pwm_chan( chan_spinner2 , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+            SRV_Channels::set_output_pwm_chan( chan_spinner3 , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
         
         }else{
             if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){
                 rc6_pwm = RC_Channels::get_radio_in(5);
-                rc8_pwm = RC_Channels::get_radio_in(7) > wp_nav->_pwm_nozzle*10+1000 ? wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
+                rc8_pwm = RC_Channels::get_radio_in(7) > copter.wp_nav->_pwm_nozzle*10+1000 ? copter.wp_nav->_pwm_nozzle*10+1000 : RC_Channels::get_radio_in(7);
             }
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
-            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm);    
+            SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm); 
+            SRV_Channels::set_output_pwm_chan( chan_spinner2 , rc8_pwm); 
+            SRV_Channels::set_output_pwm_chan( chan_spinner3 , rc8_pwm);   
         }
         
         //gcs().send_text(MAV_SEVERITY_INFO, "spray on");
@@ -139,6 +145,8 @@ void Copter::userhook_SuperSlowLoop()
     }
     if(!userCode.chan_spinner){
         SRV_Channels::find_channel(SRV_Channel::k_sprayer_spinner,userCode.chan_spinner);
+        SRV_Channels::find_channel(SRV_Channel::k_gripper,userCode.chan_spinner2);
+        SRV_Channels::find_channel(SRV_Channel::k_landing_gear_control,userCode.chan_spinner3);
         // gcs().send_text(MAV_SEVERITY_INFO, "sitha: =>chanel_pum %i", userCode.chan_spinner);
     }
     //​ Avoid calibrate pump esc
@@ -167,7 +175,7 @@ void Copter::userhook_SuperSlowLoop()
         // uint16_t flow_val = hal.gpio->read(54); //       v5+
 
         if (userCode.sensor_loop_index >= 2){
-            gcs().send_text(MAV_SEVERITY_INFO, "Sensor %s", flow_val==0? "on":"off");
+            gcs().send_text(MAV_SEVERITY_INFO, "Water sensor %s", flow_val==0? "on":"off");
             userCode.sensor_loop_index = 0;
         }
         userCode.sensor_loop_index = userCode.sensor_loop_index + 1;

@@ -89,7 +89,7 @@ AP_GPS *AP_GPS::_singleton;
 // table of user settable parameters
 const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Param: _TYPE
-    // @DisplayName: 1st GPS type
+    // @DisplayName: 1st GPS typeitl
     // @Description: GPS type of 1st GPS
     // @Values: 0:None,1:AUTO,2:uBlox,5:NMEA,6:SiRF,7:HIL,8:SwiftNav,9:DroneCAN,10:SBF,11:GSOF,13:ERB,14:MAV,15:NOVA,16:HemisphereNMEA,17:uBlox-MovingBaseline-Base,18:uBlox-MovingBaseline-Rover,19:MSP,20:AllyStar,21:ExternalAHRS,22:DroneCAN-MovingBaseline-Base,23:DroneCAN-MovingBaseline-Rover
     // @RebootRequired: True
@@ -2046,43 +2046,45 @@ void AP_GPS::calc_blended_state(void)
 
 bool AP_GPS::is_healthy(uint8_t instance) const
 {
+    // gcs().send_text(MAV_SEVERITY_INFO,"hit_1");
     if (instance >= GPS_MAX_INSTANCES) {
         return false;
     }
-
+    // gcs().send_text(MAV_SEVERITY_INFO,"hit_2 %i",get_type(_primary.get()));
     if (get_type(_primary.get()) == GPS_TYPE_NONE) {
         return false;
     }
+    // gcs().send_text(MAV_SEVERITY_INFO,"hit_3");
+    #ifdef HAL_BUILD_AP_PERIPH
+        /*
+        on AP_Periph handling of timing is done by the flight controller
+        receiving the DroneCAN messages
+        */
+        return drivers[instance] != nullptr && drivers[instance]->is_healthy();
+    #else
+        /*
+        allow two lost frames before declaring the GPS unhealthy, but
+        require the average frame rate to be close to 5Hz. We allow for
+        a bit higher average for a rover due to the packet loss that
+        happens with the RTCMv3 data
+        */
+        const uint8_t delay_threshold = 2;
+        const float delay_avg_max = ((_type[instance] == GPS_TYPE_UBLOX_RTK_ROVER) || (_type[instance] == GPS_TYPE_UAVCAN_RTK_ROVER))?245:215;
+        const GPS_timing &t = timing[instance];
+        bool delay_ok = (t.delayed_count < delay_threshold) &&
+            t.average_delta_ms < delay_avg_max &&
+            state[instance].lagged_sample_count < 5;
 
-#ifdef HAL_BUILD_AP_PERIPH
-    /*
-      on AP_Periph handling of timing is done by the flight controller
-      receiving the DroneCAN messages
-     */
-    return drivers[instance] != nullptr && drivers[instance]->is_healthy();
-#else
-    /*
-      allow two lost frames before declaring the GPS unhealthy, but
-      require the average frame rate to be close to 5Hz. We allow for
-      a bit higher average for a rover due to the packet loss that
-      happens with the RTCMv3 data
-     */
-    const uint8_t delay_threshold = 2;
-    const float delay_avg_max = ((_type[instance] == GPS_TYPE_UBLOX_RTK_ROVER) || (_type[instance] == GPS_TYPE_UAVCAN_RTK_ROVER))?245:215;
-    const GPS_timing &t = timing[instance];
-    bool delay_ok = (t.delayed_count < delay_threshold) &&
-        t.average_delta_ms < delay_avg_max &&
-        state[instance].lagged_sample_count < 5;
-
-#if defined(GPS_BLENDED_INSTANCE)
-    if (instance == GPS_BLENDED_INSTANCE) {
-        return delay_ok && blend_health_check();
-    }
-#endif
-
-    return delay_ok && drivers[instance] != nullptr &&
-           drivers[instance]->is_healthy();
-#endif // HAL_BUILD_AP_PERIPH
+        #if defined(GPS_BLENDED_INSTANCE)
+            if (instance == GPS_BLENDED_INSTANCE) {
+                return delay_ok && blend_health_check();
+            }
+        #endif
+        bool healthy = delay_ok && drivers[instance] != nullptr &&
+            drivers[instance]->is_healthy();
+        // gcs().send_text(MAV_SEVERITY_INFO,"gps healthy state____%i, driver %i", delay_ok, drivers[instance]->is_healthy());
+        return healthy;
+    #endif // HAL_BUILD_AP_PERIPH
 }
 
 bool AP_GPS::prepare_for_arming(void) {

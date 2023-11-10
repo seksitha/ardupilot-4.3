@@ -256,9 +256,16 @@ void Copter::userhook_SuperSlowLoop()
     // MISSION break by user and resume / this prevent user fly to somewhere and decide to resume so it resume to breakpoint
     if(mode_auto.mission.get_current_nav_index() > 1 && copter.get_mode()!=3 && motors->armed() && !userCode.is_print_break_auto){
         copter.wp_nav->break_auto_by_user_state = true;
+        #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        gcs().send_text(MAV_SEVERITY_INFO,"break_lat %d", userCode.mission_breakpoint.lat );
+        gcs().send_text(MAV_SEVERITY_INFO,"break_lng %d", userCode.mission_breakpoint.lng );
+        gcs().send_text(MAV_SEVERITY_INFO,"break_set" );
+        #else 
         gcs().send_text(MAV_SEVERITY_INFO,"break_lat %ld", userCode.mission_breakpoint.lat );
         gcs().send_text(MAV_SEVERITY_INFO,"break_lng %ld", userCode.mission_breakpoint.lng );
         gcs().send_text(MAV_SEVERITY_INFO,"break_set" );
+        #endif
+        
         userCode.is_print_break_auto = true;
     }
 

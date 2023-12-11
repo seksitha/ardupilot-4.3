@@ -86,6 +86,7 @@ def _set_build_context_variant(board):
         c.variant = board
 
 def init(ctx):
+    print("Init is run _______________(ˆ<>ˆ)")
     # Generate Task List, so that VS Code extension can keep track
     # of changes to possible build targets
     generate_tasklist(ctx, False)
@@ -107,6 +108,7 @@ def init(ctx):
     _set_build_context_variant(board)
 
 def options(opt):
+    print("Options is run _______________(ˆ<>ˆ)")
     opt.load('compiler_cxx compiler_c waf_unit_test python')
     opt.load('ardupilotwaf')
     opt.load('build_summary')
@@ -396,6 +398,7 @@ def _collect_autoconfig_files(cfg):
                 cfg.files.append(p)
 
 def configure(cfg):
+    print("Configure is run _______________(ˆ<>ˆ)")
 	# we need to enable debug mode when building for gconv, and force it to sitl
     if cfg.options.board is None:
         cfg.options.board = 'sitl'
@@ -594,6 +597,7 @@ def ap_periph_boards(ctx):
     return boards.get_ap_periph_boards()
 
 def generate_tasklist(ctx, do_print=True):
+    print("Task List is run _______________(ˆ<>ˆ)")
     boardlist = boards.get_boards_names()
     ap_periph_targets = boards.get_ap_periph_boards()
     tasks = []
@@ -623,6 +627,7 @@ def generate_tasklist(ctx, do_print=True):
             print(json.dumps(tasks))
 
 def board(ctx):
+    print("Board is run _______________(ˆ<>ˆ)")
     env = ConfigSet.ConfigSet()
     try:
         p = os.path.join(Context.out_dir, Build.CACHE_DIR, Build.CACHE_SUFFIX)
@@ -783,6 +788,7 @@ def _load_pre_build(bld):
         brd.pre_build(bld)    
 
 def build(bld):
+    print("Build is run _______________(ˆ<>ˆ)")
     config_hash = Utils.h_file(bld.bldnode.make_node('ap_config.h').abspath())
     bld.env.CCDEPS = config_hash
     bld.env.CXXDEPS = config_hash

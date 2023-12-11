@@ -571,6 +571,7 @@ protected:
 
     // configuration parameters
     AP_Int8 _type[GPS_MAX_RECEIVERS];
+    AP_Int8 _m10_type[GPS_MAX_RECEIVERS];
     AP_Int8 _navfilter;
     AP_Int8 _auto_switch;
     AP_Int8 _min_dgps;
@@ -591,6 +592,7 @@ protected:
     AP_Float _blend_tc;
     AP_Int16 _driver_options;
     AP_Int8 _primary;
+    
 #if HAL_ENABLE_LIBUAVCAN_DRIVERS
     AP_Int32 _node_id[GPS_MAX_RECEIVERS];
     AP_Int32 _override_node_id[GPS_MAX_RECEIVERS];

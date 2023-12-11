@@ -564,7 +564,8 @@ void Scheduler::check_low_memory_is_zero()
     }
     // we can't do address 0, but can check next 3 bytes
     const uint8_t *addr0 = (const uint8_t *)0;
-    for (uint8_t i=1; i<4; i++) {
+    for (uint8_t i=0; i<4; i++) {
+        if(i==0)return;
         if (addr0[i] != 0) {
             AP_memory_guard_error(1023);
             break;

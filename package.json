@@ -9,7 +9,7 @@
     },
     "scripts": {
       "start": "./Tools/autotest/sim_vehicle.py -v ArduCopter -j 6 --custom-location=13.038533,103.291842,0,0",
-      "start-1": "./Tools/autotest/sim_vehicle.py -v ArduCopter --instance=1 -j 6 --udp --custom-location=13.038533,103.291842,0,0",
+      "start-1": "./Tools/autotest/sim_vehicle.py -v Rover --instance=1 -j 6 --udp --custom-location=13.038533,103.291842,0,0",
       "start-2": "./Tools/autotest/sim_vehicle.py -v ArduCopter --instance=2 -j 6 --udp --custom-location=13.038533,103.291882,0,0",
       "udp": "sim_vehicle.py -v ArduCopter -j 2 --moddebug=3 --out=127.0.0.1:14555 --custom-location=13.03865,103.29179,0,0",
       "build":"./waf configure --board CUAVv5Nano && ./waf -j20 copter",

@@ -391,7 +391,8 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     AP_GROUPINFO("2_CAN_OVRIDE", 31, AP_GPS, _override_node_id[1], 0),
 #endif // GPS_MAX_RECEIVERS > 1
 #endif // HAL_ENABLE_LIBUAVCAN_DRIVERS
-
+    AP_GROUPINFO("_M10_TYPE1", 32, AP_GPS, _m10_type[0], 1),
+    AP_GROUPINFO("_M10_TYPE2", 33, AP_GPS, _m10_type[1], 1),
     AP_GROUPEND
 };
 

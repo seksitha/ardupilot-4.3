@@ -22,8 +22,11 @@ void UserCode::set_pump_spinner_pwm(bool spray_state){
             } 
             SRV_Channels::set_output_pwm_chan( chan_pump , rc6_pwm);
             SRV_Channels::set_output_pwm_chan( chan_spinner , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+<<<<<<< HEAD
             SRV_Channels::set_output_pwm_chan( chan_spinner2 , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
             SRV_Channels::set_output_pwm_chan( chan_spinner3 , rc8_pwm = RC_Channels::get_radio_in(7) > 1080 ? copter.wp_nav->_pwm_nozzle < 100 ? copter.wp_nav->_pwm_nozzle *10+1000: 1950 : 1000 );
+=======
+>>>>>>> Copter-4.3
         
         }else{
             if (rc6_pwm != RC_Channels::get_radio_in(5) or rc8_pwm != RC_Channels::get_radio_in(7) ){

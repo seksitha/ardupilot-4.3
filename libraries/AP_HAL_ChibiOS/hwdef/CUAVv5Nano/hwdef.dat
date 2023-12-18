@@ -2,7 +2,7 @@
 # for CUAVv5Nano F7 hardware.
 # This is a variant of fmuv5 without the IOMCU
 
-include ../fmuv5/hwdef.dat
+include ../fmuv5/hwdef-nano.dat
 
 # we shift the system timer to TIM5 to allow
 # us to use TIM2 for extra PWM outputs

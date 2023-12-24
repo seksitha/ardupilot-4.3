@@ -26,11 +26,7 @@ bool ModeLoiter::init(bool ignore_checks)
     loiter_nav->init_target();
 
     // initialise the vertical position controller
-    float pos_target_z_cm = pos_control->get_pos_target_z_cm();
-    float pos_cur_z_cm = inertial_nav.get_position_z_up_cm();
-    // fabs() in c++ return positive number of negative so if delta > 0 we re-assign z_target
-    if (!pos_control->is_active_z() ||fabs(pos_target_z_cm - pos_cur_z_cm) > 10.0f) {
-        pos_control->set_pos_target_z_cm(pos_cur_z_cm);
+    if (!pos_control->is_active_z()){
         pos_control->init_z_controller();
     }
 
@@ -166,6 +162,12 @@ void ModeLoiter::run()
         break;
 
     case AltHold_Flying:
+        if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+        if(AP_HAL::millis() - _debug_timer >= 1000){
+            gcs().send_text(MAV_SEVERITY_INFO,"______mode: %i", loiter_state);
+            _debug_timer = 0;
+        }
+
         // set motors to full range
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 

@@ -71,6 +71,9 @@ public:
     void set_speed_up(float speed_up_cms);
     void set_speed_down(float speed_down_cms);
 
+    void set_compensate_z_cm(float compensate_z_cm) { _pos_compensate_z_cm = compensate_z_cm; }
+    float get_compensate_z_cm()const {return _pos_compensate_z_cm;}
+
     /// get default target horizontal velocity during wp navigation
     float get_default_speed_xy() const { return _wp_speed_cms; }
 
@@ -95,7 +98,7 @@ public:
     const Vector3f &get_wp_origin() const { return _origin; }
 
     /// true if origin.z and destination.z are alt-above-terrain, false if alt-above-ekf-origin
-    bool origin_and_destination_are_terrain_alt() const { return _terrain_alt; }
+    bool origin_and_destination_are_terrain_alt() const { return _used_terrain_alt; }
 
     /// set_wp_destination waypoint using location class
     ///     provide the next_destination if known
@@ -220,7 +223,6 @@ public:
     AP_Int8     _fast_turn;
     bool        _flags_change_alt_by_pilot = false;
     float       _pilot_clime_cm = 0.00f;
-    float       _wpnav_new_alt = 0.00f;
     float       traveled_distance;
     Location    origin_for_breakpoint;
     int32_t     wp_bearing;
@@ -293,9 +295,10 @@ protected:
     float       _offset_vel;            // horizontal velocity reference used to slow the aircraft for pause and to ensure the aircraft can maintain height above terrain
     float       _offset_accel;          // horizontal acceleration reference used to slow the aircraft for pause and to ensure the aircraft can maintain height above terrain
     bool        _paused;                // flag for pausing waypoint controller
-
+    
+    float _pos_compensate_z_cm = 0;
     // terrain following variables
-    bool        _terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin
+    bool        _used_terrain_alt;   // true if origin and destination.z are alt-above-terrain, false if alt-above-ekf-origin
     bool        _rangefinder_available; // true if rangefinder is enabled (user switch can turn this true/false)
     AP_Int8     _rangefinder_use;       // parameter that specifies if the range finder should be used for terrain following commands
     bool        _rangefinder_healthy;   // true if rangefinder distance is healthy (i.e. between min and maximum)

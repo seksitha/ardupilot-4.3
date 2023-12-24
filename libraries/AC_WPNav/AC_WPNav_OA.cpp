@@ -76,7 +76,7 @@ bool AC_WPNav_OA::update_wpnav()
         if (_oa_state == AP_OAPathPlanner::OA_NOT_REQUIRED) {
             _origin_oabak = _origin;
             _destination_oabak = _destination;
-            _terrain_alt_oabak = _terrain_alt;
+            _terrain_alt_oabak = _used_terrain_alt;
         }
 
         // convert origin and destination to Locations and pass into oa

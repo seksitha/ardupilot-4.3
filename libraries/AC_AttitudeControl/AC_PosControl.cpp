@@ -929,7 +929,6 @@ void AC_PosControl::update_z_controller(float rngfnd)
 
     // calculate the target velocity correction
     float pos_target_zf = _pos_target.z; // wpnav_advance_target set pos target by set_pos_vel_accel()
-    
     _vel_target.z = _p_pos_z.update_all(pos_target_zf /*target*/, rngfnd > 0 ? rngfnd : _inav.get_position_z_up_cm() /* input to compare*/);
     _vel_target.z *= AP::ahrs().getControlScaleZ();
 

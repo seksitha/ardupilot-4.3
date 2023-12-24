@@ -206,9 +206,13 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
     if (stopping_point.is_zero()) {
         get_wp_stopping_point(stopping_point);
     }
-    _origin = _destination = stopping_point;
-    _origin.z = _destination.z =  stopping_point.z;
-    _terrain_alt = false;
+    
+    _origin = _destination = stopping_point; 
+    // Sitha: can be takeoff alt or a previous destination
+    // only run when after takeoff or a stopping which is default 0 then alt is previous set destination
+    // if it is an interrupt mission it is the same value from last set
+    _origin.z = _destination.z =  stopping_point.z = _pos_compensate_z_cm;
+    _used_terrain_alt = false;
     _this_leg_is_spline = false;
 
     // initialise the terrain velocity to the current maximum velocity
@@ -258,16 +262,16 @@ void AC_WPNav::set_speed_down(float speed_down_cms)
 ///     returns false if conversion from location to vector from ekf origin cannot be calculated
 bool AC_WPNav::set_wp_destination_loc(const Location& destination)
 {
-    bool terr_alt;
+    bool used_terrain_alt;
     Vector3f dest_neu;
 
     // convert destination location to vector
-    if (!get_vector_NEU(destination, dest_neu, terr_alt)) {
+    if (!get_vector_NEU(destination, dest_neu, used_terrain_alt)) {
         return false;
     }
 
     // set target as vector from EKF origin
-    return set_wp_destination(dest_neu, terr_alt);
+    return set_wp_destination(dest_neu, used_terrain_alt);
 }
 
 /// set next destination using location class
@@ -294,14 +298,14 @@ bool AC_WPNav::get_wp_destination_loc(Location& destination) const
         return false;
     }
 
-    destination = Location{get_wp_destination(), _terrain_alt ? Location::AltFrame::ABOVE_TERRAIN : Location::AltFrame::ABOVE_ORIGIN};
+    destination = Location{get_wp_destination(), _used_terrain_alt ? Location::AltFrame::ABOVE_TERRAIN : Location::AltFrame::ABOVE_ORIGIN};
     return true;
 }
 
 /// set_wp_destination - set destination waypoints using position vectors (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is an altitude above terrain (false if alt-above-ekf-origin)
 ///     returns false on failure (likely caused by missing terrain data)
-bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
+bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool used_terrain_alt)
 {
     // re-initialise if previous destination has been interrupted
     if (!is_active() || !_flags.reached_destination) {
@@ -312,9 +316,24 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
     float origin_speed = 0.0f;
 
     // use previous destination as origin
-    _origin = _destination;
+    _origin = _destination; //@ init _destination is set
+    
+    // update destination
+    _destination = destination; //destination is mission cmd
+    // this only run once when auto mode start, so don't worry it increment pos_compensate
+    // next will run set_wp_destination_next
+    _destination.z = _pos_compensate_z_cm;
+    // gcs().send_text(MAV_SEVERITY_INFO,"set origin alt: %f ______des: %f", _origin.z, _destination.z);
 
-    if (terrain_alt == _terrain_alt) {
+    _used_terrain_alt = used_terrain_alt;
+    // reset clime alt and wait for pilot throttle cmd again
+    _pilot_clime_cm = 0.00f;
+    if(copter.mode_auto.mission.get_current_nav_index() >= 2 && copter.get_mode()!=6 ){ // not to do in RTL 
+        _destination.y = _destination.y+(_corect_coordinate_we * 100);
+        _destination.x = _destination.x+(_corect_coordinate_ns * 100);
+    }
+
+    if (used_terrain_alt == _used_terrain_alt) {
         if (_this_leg_is_spline) {
             // if previous leg was a spline we can use current target velocity vector for origin velocity vector
             Vector3f curr_target_vel = _pos_control.get_vel_desired_cms();
@@ -333,25 +352,16 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
         }
 
         // convert origin to alt-above-terrain if necessary
-        if (terrain_alt) {
+        if (used_terrain_alt) {
             // new destination is alt-above-terrain, previous destination was alt-above-ekf-origin
             _origin.z -= origin_terr_offset;
+            //how this would do real time compensate???
             _pos_control.set_pos_offset_z_cm(_pos_control.get_pos_offset_z_cm() + origin_terr_offset);
         } else {
             // new destination is alt-above-ekf-origin, previous destination was alt-above-terrain
             _origin.z += origin_terr_offset;
             _pos_control.set_pos_offset_z_cm(_pos_control.get_pos_offset_z_cm() - origin_terr_offset);
         }
-    }
-
-    // update destination
-    _destination = destination;
-    _terrain_alt = terrain_alt;
-    // reset clime alt and wait for pilot throttle cmd again
-    _pilot_clime_cm = 0.00f;
-    if(copter.mode_auto.mission.get_current_nav_index() >= 2 && copter.get_mode()!=6 ){ // not to do in RTL 
-        _destination.y = _destination.y+(_corect_coordinate_we * 100);
-        _destination.x = _destination.x+(_corect_coordinate_ns * 100);
     }
 
     if (_flags.fast_waypoint && !_this_leg_is_spline && !_next_leg_is_spline && !_scurve_next_leg.finished()) {
@@ -378,14 +388,15 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool terrain_alt)
 /// set next destination using position vector (distance from ekf origin in cm)
 ///     terrain_alt should be true if destination.z is a desired altitude above terrain
 ///     provide next_destination
-bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool terrain_alt)
+bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool used_terrain_alt)
 {
     // do not add next point if alt types don't match
-    if (terrain_alt != _terrain_alt) {
+    if (used_terrain_alt != _used_terrain_alt) {
         return true;
     }
 
         Vector3f next_dest = destination;
+        next_dest.z = _pos_compensate_z_cm;
     if(copter.mode_auto.mission.get_current_nav_index() > 1 /*not takeoff*/ && copter.get_mode()!=6 ){ // not to do in RTL 
         next_dest.y = next_dest.y+(_corect_coordinate_we * 100);
         next_dest.x = next_dest.x+(_corect_coordinate_ns * 100);
@@ -504,17 +515,19 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         }
 
     }
+
+    /** Sitha::: Here the terrain is offset to pos_control */
     // calculate terrain adjustments
     float terr_offset = 0.0f;
-    if (_terrain_alt && !get_terrain_offset(terr_offset)) {
+    if (_used_terrain_alt && !get_terrain_offset(terr_offset)) {
         return false;
     }
-
     const float offset_z_scaler = _pos_control.pos_offset_z_scaler(terr_offset, get_terrain_margin() * 100.0);
     // input shape the terrain offset
     // Sitha: terrain is use at the code bellow target_pos.z but we don't want that we want to overwrite current ekf alt
-    //_pos_control.update_pos_offset_z(terr_offset); 
-
+    _pos_control.update_pos_offset_z(terr_offset); 
+    /** End of terrain offset */
+    
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
     const Vector3f &curr_pos = _inav.get_position_neu_cm() - Vector3f{0, 0, terr_offset};
     Vector3f curr_target_vel = _pos_control.get_vel_desired_cms();
@@ -603,17 +616,18 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     
     
     if(_flags_change_alt_by_pilot){
+        // target_pos.z is set to mission.item.z every loop so not an increment val 
+        // that why increment is implement each loop
         target_pos.z = target_pos.z + _pilot_clime_cm;
-        _wpnav_new_alt  = target_pos.z;
         _destination.z = target_pos.z;
     }
     if(wpnav_pos_loop > 250){  // just for printing some info in slower freq
-        // gcs().send_text(MAV_SEVERITY_INFO, "sitha: => pos_z %f",target_pos.z);
+        gcs().send_text(MAV_SEVERITY_INFO, "sitha: => pos_z %f",target_pos.z);
         wpnav_pos_loop = 0;
     }
     wpnav_pos_loop +=1;
 
-    // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't this
+    // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't do this
     target_vel.z += _pos_control.get_vel_offset_z_cms();
     target_accel.z += _pos_control.get_accel_offset_z_cmss();
 
@@ -718,6 +732,7 @@ bool AC_WPNav::get_terrain_offset(float& offset_cm)
         return false;
     case AC_WPNav::TerrainSource::TERRAIN_FROM_RANGEFINDER:
         if (_rangefinder_healthy) {
+            // offset rngfnd in auto is set here
             offset_cm = _inav.get_position_z_up_cm() - _rangefinder_alt_cm;
             return true;
         }
@@ -795,7 +810,7 @@ bool AC_WPNav::set_spline_destination_next_loc(const Location& next_destination,
 ///     next_destination should be set to the next segment's destination
 ///     next_terrain_alt should be true if next_destination.z is a desired altitude above terrain (false if its desired altitudes above ekf origin)
 ///     next_destination.z  must be in the same "frame" as destination.z (i.e. if destination is a alt-above-terrain, next_destination should be too)
-bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline)
+bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool used_terrain_alt, const Vector3f& next_destination, bool next_terrain_alt, bool next_is_spline)
 {
     // re-initialise if previous destination has been interrupted
     if (!is_active() || !_flags.reached_destination) {
@@ -808,7 +823,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
 
     // calculate origin and origin velocity vector
     Vector3f origin_vector;
-    if (terrain_alt == _terrain_alt) {
+    if (used_terrain_alt == _used_terrain_alt) {
         if (_flags.fast_waypoint) {
             // calculate origin vector
             if (_this_leg_is_spline) {
@@ -834,7 +849,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
         }
 
         // convert origin to alt-above-terrain if necessary
-        if (terrain_alt) {
+        if (used_terrain_alt) {
             // new destination is alt-above-terrain, previous destination was alt-above-ekf-origin
             _origin.z -= origin_terr_offset;
             _pos_control.set_pos_offset_z_cm(_pos_control.get_pos_offset_z_cm() + origin_terr_offset);
@@ -847,11 +862,11 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
 
     // store destination location
     _destination = destination;
-    _terrain_alt = terrain_alt;
+    _used_terrain_alt = used_terrain_alt;
 
     // calculate destination velocity vector
     Vector3f destination_vector;
-    if (terrain_alt == next_terrain_alt) {
+    if (used_terrain_alt == next_terrain_alt) {
         if (next_is_spline) {
             // leave this segment moving parallel to vector from origin to next destination
             destination_vector = next_destination - _origin;
@@ -878,7 +893,7 @@ bool AC_WPNav::set_spline_destination(const Vector3f& destination, bool terrain_
 bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, bool next_terrain_alt, const Vector3f& next_next_destination, bool next_next_terrain_alt, bool next_next_is_spline)
 {
     // do not add next point if alt types don't match
-    if (next_terrain_alt != _terrain_alt) {
+    if (next_terrain_alt != _used_terrain_alt) {
         return true;
     }
 
@@ -927,7 +942,7 @@ bool AC_WPNav::set_spline_destination_next(const Vector3f& next_destination, boo
 
 // convert location to vector from ekf origin.  terrain_alt is set to true if resulting vector's z-axis should be treated as alt-above-terrain
 //      returns false if conversion failed (likely because terrain data was not available)
-bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_alt)
+bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &used_terrain_alt)
 {
     // convert location to NE vector2f
     Vector2f res_vec;
@@ -942,15 +957,15 @@ bool AC_WPNav::get_vector_NEU(const Location &loc, Vector3f &vec, bool &terrain_
             return false;
         }
         vec.z = terr_alt;
-        terrain_alt = true;
+        used_terrain_alt = true;
     } else {
-        terrain_alt = false;
+        used_terrain_alt = false;
         int32_t temp_alt;
         if (!loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, temp_alt)) {
             return false;
         }
         vec.z = temp_alt;
-        terrain_alt = false;
+        used_terrain_alt = false;
     }
 
     // copy xy (we do this to ensure we do not adjust vector unless the overall conversion is successful

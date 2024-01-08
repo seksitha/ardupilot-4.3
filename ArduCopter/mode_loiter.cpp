@@ -26,7 +26,11 @@ bool ModeLoiter::init(bool ignore_checks)
     loiter_nav->init_target();
 
     // initialise the vertical position controller
-    if (!pos_control->is_active_z()){
+    float pos_target_z_cm = pos_control->get_pos_target_z_cm();
+    float pos_cur_z_cm = inertial_nav.get_position_z_up_cm();
+    // fabs() in c++ return positive number of negative so if delta > 0 we re-assign z_target
+    if (!pos_control->is_active_z() || fabsf(pos_target_z_cm - pos_cur_z_cm) > 10.0f) {
+        pos_control->set_pos_target_z_cm(pos_cur_z_cm);
         pos_control->init_z_controller();
     }
 

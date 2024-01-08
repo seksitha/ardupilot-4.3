@@ -833,7 +833,7 @@ ardupilotwaf.build_command('check-all',
     program_group_list='all',
     doc='shortcut for `waf check --alltests`',
 )
-
+print(" ex. waf copter will just call wscript and loop follow code ____________()______________ exec arupilotwaf.build_command")
 for name in ('antennatracker', 'copter', 'heli', 'plane', 'rover', 'sub', 'blimp', 'bootloader','iofirmware','AP_Periph','replay'):
     ardupilotwaf.build_command(name,
         program_group_list=name,

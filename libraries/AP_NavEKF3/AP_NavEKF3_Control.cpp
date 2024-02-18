@@ -619,10 +619,10 @@ bool NavEKF3_core::assume_zero_sideslip(void) const
 // returns false if absolute aiding and GPS is being used or if the origin is already set
 bool NavEKF3_core::setOriginLLH(const Location &loc)
 {
-    if ((PV_AidingMode == AID_ABSOLUTE) && (frontend->sources.getPosXYSource() == AP_NavEKF_Source::SourceXY::GPS)) {
-        // reject attempts to set the origin if GPS is being used or if the origin is already set
-        return false;
-    }
+    // if ((PV_AidingMode == AID_ABSOLUTE) && (frontend->sources.getPosXYSource() == AP_NavEKF_Source::SourceXY::GPS)) {
+    //     // reject attempts to set the origin if GPS is being used or if the origin is already set
+    //     return false;
+    // }
 
     return setOrigin(loc);
 }
@@ -632,9 +632,9 @@ bool NavEKF3_core::setOriginLLH(const Location &loc)
 bool NavEKF3_core::setOrigin(const Location &loc)
 {
     // if the origin is valid reject setting a new origin
-    if (validOrigin) {
-        return false;
-    }
+    // if (validOrigin) {
+    //     return false;
+    // }
 
     EKF_origin = loc;
     ekfGpsRefHgt = (double)0.01 * (double)EKF_origin.alt;

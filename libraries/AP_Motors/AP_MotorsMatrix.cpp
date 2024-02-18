@@ -756,10 +756,10 @@ bool AP_MotorsMatrix::setup_quad_matrix(motor_frame_type frame_type)
         // Y4 motor definition with right front CCW, left front CW
         static const AP_MotorsMatrix::MotorDefRaw motors[] {
             // rollFac, pitchFac, yaw, test order
-            { -1.0f,  1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1 },
+            { -1.0f,  1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1 },
             {  0.0f, -1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  2 },
             {  0.0f, -1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 3 },
-            {  1.0f,  1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 4 },
+            {  1.0f,  1.000f, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  4 }, 
         };
         add_motors_raw(motors, ARRAY_SIZE(motors));
         break;

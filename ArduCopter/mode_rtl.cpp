@@ -550,7 +550,9 @@ void ModeRTL::compute_return_target()
 #endif
 
     // ensure we do not descend
-    rtl_path.return_target.alt = MAX(rtl_path.return_target.alt, curr_alt);
+    // max return the one that is big than among the pair
+    // rtl_path.return_target.alt = MAX(rtl_path.return_target.alt, curr_alt);
+    rtl_path.return_target.alt = curr_alt + g.rtl_altitude;
 }
 
 bool ModeRTL::get_wp(Location& destination) const

@@ -98,12 +98,22 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
     // benewake Can id = 589826
     // RFx24 id = 214 new alt_rada
     const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
+    
+    // arduino Serial.println(CAN_RX_msg.buf[2] | uint16_t(CAN_RX_msg.buf[3] << 8));    
+    const uint16_t dist_cm = (frame.data[4]<<8 | frame.data[5]);
+    const uint16_t cksum = ((frame.data[4]+frame.data[5]+frame.data[6]) & 0xFF) ;
+   
     #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
         #if !defined(HAL_BUILD_AP_PERIPH)
-        if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO," s_id %li",id); //0x00 can_h
-         #endif
+            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+            if(AP_HAL::millis() - _debug_timer >= 1000){
+                 if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
+                // gcs().send_text(MAV_SEVERITY_INFO," sum 0x%02hhx \n : d7 0x%02hhx \n", cksum, frame.data[7]); //0x00 can_h
+                _debug_timer = 0;
+            }
+        #endif
     #endif
-    
+
     if (frame.isExtended()) {
         // H30 radar uses extended frames
          // receive_id.get() this method is geting id from Param set
@@ -133,13 +143,6 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         return false;
     }
     last_recv_id = id;
-    #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
-        #if !defined(HAL_BUILD_AP_PERIPH)
-        if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
-        #endif
-    #endif
-    const uint16_t dist_cm = (frame.data[5]);
-    const uint16_t cksum = (frame.data[3]+frame.data[4]+frame.data[5]+frame.data[6]) ;
     
     if ((cksum) == frame.data[7]) {
         // too low signal strength
@@ -147,17 +150,7 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         _distance_count++;
         return true;
     }
-
-    // hal.console->printf("d0 0x%02hhx \n", frame.data[0]); //5A
-    // hal.console->printf("d1 0x%02hhx \n", frame.data[1]); //A5
-    // hal.console->printf("d2 0x%02hhx \n", frame.data[2]); //len
-    // hal.console->printf("d3 0x%02hhx \n", frame.data[3]); //0xf3 can_l
-    // hal.console->printf("d1 %f \n", _distance_sum_cm);
-    // gcs().send_text(MAV_SEVERITY_INFO,"d4 0x%02hhx \n", frame.data[4]); //0x00 can_h
-    // hal.console->printf("d5 0x%02hhx \n", frame.data[5]); //0x3f dbf
-    // hal.console->printf("d6 0x%02hhx \n", frame.data[6]); //0x00 resv
-    // hal.console->printf("d7 0x%02hhx \n", frame.data[7]); //0x32 cksum 0xf3+0x00+0x3f=0x32
-
+    
     return false;
 }
 

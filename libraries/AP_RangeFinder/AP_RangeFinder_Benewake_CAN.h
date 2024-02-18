@@ -35,6 +35,7 @@ private:
     float _distance_sum_cm;
     uint32_t _distance_count;
     int32_t last_recv_id = -1;
+    uint32_t _debug_timer = 0;
 
     AP_Int32 snr_min;
     AP_Int8 check_id;

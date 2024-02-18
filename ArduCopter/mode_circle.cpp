@@ -103,7 +103,7 @@ void ModeCircle::run()
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
     // update the vertical offset based on the surface measurement
-    copter.surface_tracking.update_surface_offset();
+    // copter.surface_tracking.update_surface_offset();
 
     copter.failsafe_terrain_set_status(copter.circle_nav->update(target_climb_rate));
 

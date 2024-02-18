@@ -26,11 +26,7 @@ bool ModeLoiter::init(bool ignore_checks)
     loiter_nav->init_target();
 
     // initialise the vertical position controller
-    float pos_target_z_cm = pos_control->get_pos_target_z_cm();
-    float pos_cur_z_cm = inertial_nav.get_position_z_up_cm();
-    // fabs() in c++ return positive number of negative so if delta > 0 we re-assign z_target
-    if (!pos_control->is_active_z() || fabsf(pos_target_z_cm - pos_cur_z_cm) > 10.0f) {
-        pos_control->set_pos_target_z_cm(pos_cur_z_cm);
+    if (!pos_control->is_active_z()) {
         pos_control->init_z_controller();
     }
 
@@ -135,6 +131,17 @@ void ModeLoiter::run()
         attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
         break;
 
+    case AltHold_Landed_Ground_Idle:
+        attitude_control->reset_yaw_target_and_rate();
+        FALLTHROUGH;
+
+    case AltHold_Landed_Pre_Takeoff:
+        attitude_control->reset_rate_controller_I_terms_smoothly();
+        loiter_nav->init_target();
+        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
+        pos_control->relax_z_controller(0.0f);   // forces throttle output to decay to zero
+        break;
+
     case AltHold_Takeoff:
         // initiate take-off
         if (!takeoff.running()) {
@@ -154,46 +161,29 @@ void ModeLoiter::run()
         attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
         break;
 
-    case AltHold_Landed_Ground_Idle:
-        attitude_control->reset_yaw_target_and_rate();
-        FALLTHROUGH;
-
-    case AltHold_Landed_Pre_Takeoff:
-        attitude_control->reset_rate_controller_I_terms_smoothly();
-        loiter_nav->init_target();
-        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
-        pos_control->relax_z_controller(0.0f);   // forces throttle output to decay to zero
-        break;
-
     case AltHold_Flying:
-        if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-        if(AP_HAL::millis() - _debug_timer >= 1000){
-            gcs().send_text(MAV_SEVERITY_INFO,"______mode: %i", loiter_state);
-            _debug_timer = 0;
-        }
-
         // set motors to full range
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
-#if PRECISION_LANDING == ENABLED
-        bool precision_loiter_old_state = _precision_loiter_active;
-        if (do_precision_loiter()) {
-            precision_loiter_xy();
-            _precision_loiter_active = true;
-        } else {
-            _precision_loiter_active = false;
-        }
-        if (precision_loiter_old_state && !_precision_loiter_active) {
-            // prec loiter was active, not any more, let's init again as user takes control
-            loiter_nav->init_target();
-        }
-        // run loiter controller if we are not doing prec loiter
-        if (!_precision_loiter_active) {
-            loiter_nav->update();
-        }
-#else
-        loiter_nav->update();
-#endif
+        #if PRECISION_LANDING == ENABLED
+                bool precision_loiter_old_state = _precision_loiter_active;
+                if (do_precision_loiter()) {
+                    precision_loiter_xy();
+                    _precision_loiter_active = true;
+                } else {
+                    _precision_loiter_active = false;
+                }
+                if (precision_loiter_old_state && !_precision_loiter_active) {
+                    // prec loiter was active, not any more, let's init again as user takes control
+                    loiter_nav->init_target();
+                }
+                // run loiter controller if we are not doing prec loiter
+                if (!_precision_loiter_active) {
+                    loiter_nav->update();
+                }
+        #else
+                loiter_nav->update();
+        #endif
 
         // call attitude controller
         attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
@@ -201,16 +191,22 @@ void ModeLoiter::run()
         // get avoidance adjusted climb rate
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
+        // Sitha: We take out surface tracking in Loiter mode.
         // update the vertical offset based on the surface measurement
-        copter.surface_tracking.update_surface_offset();
+        // copter.surface_tracking.update_surface_offset();
+        
 
         // Send the commanded climb rate to the position controller
         pos_control->set_pos_target_z_from_climb_rate_cm(target_climb_rate);
         break;
     }
-
-    // run the vertical position controller and set output throttle
-    pos_control->update_z_controller();
+    
+    if(!copter.userCode.reset_target_to_gps){
+        pos_control->set_pos_target_z_cm(inertial_nav.get_position_z_up_cm());
+        copter.userCode.reset_target_to_gps = true;
+    }
+        
+    pos_control->update_z_controller(inertial_nav.get_position_z_up_cm());
 }
 
 uint32_t ModeLoiter::wp_distance() const

@@ -127,11 +127,13 @@ bool ModeGuided::do_user_takeoff_start(float takeoff_alt_cm)
         alt_target_terrain = true;
     } else {
         // interpret altitude as alt-above-home
+        // Sitha: set target alt to user provided alt ex.10m and give the frame above home
         Location target_loc = copter.current_loc;
         target_loc.set_alt_cm(takeoff_alt_cm, Location::AltFrame::ABOVE_HOME);
 
         // provide target altitude as alt-above-ekf-origin
-        if (!target_loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, alt_target_cm)) {
+        // Sitha: take the ex. 10m user provide calculate it above origin (alt+ekf_orrigin)
+        if (!target_loc.get_alt_cm(Location::AltFrame::ABOVE_ORIGIN, alt_target_cm)) { //set alt above home
             // this should never happen but we reject the command just in case
             return false;
         }

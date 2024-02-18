@@ -147,3 +147,4 @@ tasklist.json
 modules/esp_idf
 *.parm
 .vscode/*.*
+*.out

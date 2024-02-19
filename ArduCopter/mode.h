@@ -125,8 +125,7 @@ public:
 
 protected:
     u_int32_t _debug_timer = 0;
-    float _alt_offset_gps_alt;
-    float _alt_transit_from_rngfnd;
+
     // helper functions
     bool is_disarmed_or_landed() const;
     void zero_throttle_and_relax_ac(bool spool_up = false);

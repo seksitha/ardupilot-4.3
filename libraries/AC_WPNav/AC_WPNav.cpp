@@ -207,11 +207,11 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
         get_wp_stopping_point(stopping_point);
     }
     
-    _origin = _destination = stopping_point; 
+    _origin = _destination = stopping_point; // zero at start because takeoff is handle it.
     // Sitha: can be takeoff alt or a previous destination
     // only run when after takeoff or a stopping which is default 0 then alt is previous set destination
     // if it is an interrupt mission it is the same value from last set
-    _origin.z = _destination.z =  stopping_point.z = _pos_compensate_z_cm;
+    _origin.z = _destination.z =  stopping_point.z;
     _used_terrain_alt = false;
     _this_leg_is_spline = false;
 
@@ -316,14 +316,12 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool used_terrain
     float origin_speed = 0.0f;
 
     // use previous destination as origin
-    _origin = _destination; //@ init _destination is set
+    // sitha: do_nav_wp => wp_nav->wp_and_spline_init(0, stopping_point); where stopping_point is from takeoff
+    // sitha: do_nav_wp => wp_nav->set_wp_destination_loc(dest_loc) 
+    _origin = _destination; // Sitha: set _destination.z @advance_along_track
     
     // update destination
     _destination = destination; //destination is mission cmd
-    // this only run once when auto mode start, so don't worry it increment pos_compensate
-    // next will run set_wp_destination_next
-    _destination.z = _pos_compensate_z_cm;
-    // gcs().send_text(MAV_SEVERITY_INFO,"set origin alt: %f ______des: %f", _origin.z, _destination.z);
 
     _used_terrain_alt = used_terrain_alt;
     // reset clime alt and wait for pilot throttle cmd again
@@ -396,7 +394,6 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool used_te
     }
 
         Vector3f next_dest = destination;
-        next_dest.z = _pos_compensate_z_cm;
     if(copter.mode_auto.mission.get_current_nav_index() > 1 /*not takeoff*/ && copter.get_mode()!=6 ){ // not to do in RTL 
         next_dest.y = next_dest.y+(_corect_coordinate_we * 100);
         next_dest.x = next_dest.x+(_corect_coordinate_ns * 100);
@@ -525,7 +522,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     const float offset_z_scaler = _pos_control.pos_offset_z_scaler(terr_offset, get_terrain_margin() * 100.0);
     // input shape the terrain offset
     // Sitha: terrain is use at the code bellow target_pos.z but we don't want that we want to overwrite current ekf alt
-    _pos_control.update_pos_offset_z(terr_offset); 
+    // _pos_control.update_pos_offset_z(terr_offset); 
     /** End of terrain offset */
     
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
@@ -619,13 +616,11 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         // target_pos.z is set to mission.item.z every loop so not an increment val 
         // that why increment is implement each loop
         target_pos.z = target_pos.z + _pilot_clime_cm;
+
+        // Sitha: this to ensure next origin is set to new alt
         _destination.z = target_pos.z;
     }
-    if(wpnav_pos_loop > 250){  // just for printing some info in slower freq
-        gcs().send_text(MAV_SEVERITY_INFO, "sitha: => pos_z %f",target_pos.z);
-        wpnav_pos_loop = 0;
-    }
-    wpnav_pos_loop +=1;
+    
 
     // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't do this
     target_vel.z += _pos_control.get_vel_offset_z_cms();

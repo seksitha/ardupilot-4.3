@@ -96,6 +96,9 @@ public:
 
     /// get origin using position vector (distance from ekf origin in cm)
     const Vector3f &get_wp_origin() const { return _origin; }
+    void  set_wp_origin_z_cm( float alt) {  _origin.z = alt;}
+    void  set_wp_destination_z_cm(float alt){_destination.z = alt;}
+
 
     /// true if origin.z and destination.z are alt-above-terrain, false if alt-above-ekf-origin
     bool origin_and_destination_are_terrain_alt() const { return _used_terrain_alt; }

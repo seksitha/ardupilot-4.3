@@ -96,56 +96,35 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
 {
     WITH_SEMAPHORE(_sem);
     // benewake Can id = 589826
-    // RFx24 id = 214 new alt_rada
-    const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
+    // RFx24 id = 214 new old=200 alt_rada
+    uint16_t id = uint16_t(frame.id);
     
     // arduino Serial.println(CAN_RX_msg.buf[2] | uint16_t(CAN_RX_msg.buf[3] << 8));    
-    const uint16_t dist_cm = (frame.data[4]<<8 | frame.data[5]);
-    const uint16_t cksum = ((frame.data[4]+frame.data[5]+frame.data[6]) & 0xFF) ;
-   
-    #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
-        #if !defined(HAL_BUILD_AP_PERIPH)
-            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            if(AP_HAL::millis() - _debug_timer >= 1000){
-                 if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %li",id); //0x00 can_h
-                // gcs().send_text(MAV_SEVERITY_INFO," sum 0x%02hhx \n : d7 0x%02hhx \n", cksum, frame.data[7]); //0x00 can_h
-                _debug_timer = 0;
-            }
-        #endif
-    #endif
+    uint16_t dist_cm = (frame.data[4]<<8 | frame.data[5]);
+    bool cksum = ((frame.data[3]+frame.data[4]+frame.data[5]+frame.data[6]) & 0xFF) == frame.data[7] ;
 
-    if (frame.isExtended()) {
-        // H30 radar uses extended frames
-         // receive_id.get() this method is geting id from Param set
-        if (receive_id != 0 && id != receive_id.get()) {
-            // incorrect receive ID
-            return false;
-        }
-        if (last_recv_id != -1 && id != last_recv_id) {
-            // changing ID
-            return false;
-        }
-        last_recv_id = id;
+    // if (receive_id != 0 && id != receive_id) {
+    //     // incorrect receive ID
+    //     return false;
+    // }
+
+    // if ( id != last_recv_id) {
+    //     // changing ID
+    //     return false;
+    // }
+    // last_recv_id = id;
+    
+    if (cksum) {
         #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
             #if !defined(HAL_BUILD_AP_PERIPH)
-            if(check_id ==1) gcs().send_text(MAV_SEVERITY_INFO,"ext id %li",id); //0x00 can_h
-             #endif
+                if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+                if(AP_HAL::millis() - _debug_timer >= 1000){
+                    if(check_id == 1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %.2f %i, c: %i, 7: %i",float(id),dist_cm,cksum,frame.data[7]); //0x00 can_h
+                    // cs().send_text(MAV_SEVERITY_INFO," sum %i : d7%i", cksum, frame.data[7]); //0x00 can_h
+                    _debug_timer = 0;
+                }
+            #endif
         #endif
-        return handle_frame_H30(frame);
-    }
-
-    if (receive_id != 0 && id != uint16_t(receive_id.get())) {
-        // incorrect receive ID
-        return false;
-    }
-    if (last_recv_id != -1 && id != last_recv_id) {
-        // changing ID
-        return false;
-    }
-    last_recv_id = id;
-    
-    if ((cksum) == frame.data[7]) {
-        // too low signal strength
         _distance_sum_cm += dist_cm ;
         _distance_count++;
         return true;

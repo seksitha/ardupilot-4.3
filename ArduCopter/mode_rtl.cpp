@@ -431,10 +431,13 @@ void ModeRTL::build_path()
     compute_return_target();
 
     // climb target is above our origin point at the return altitude
-    rtl_path.climb_target = Location(rtl_path.origin_point.lat, rtl_path.origin_point.lng, rtl_path.return_target.alt, rtl_path.return_target.get_alt_frame());
+    gcs().send_text(MAV_SEVERITY_INFO,"alt RTL....: %0.2f", (float(rtl_path.return_target.alt)));
+    rtl_path.climb_target = Location(rtl_path.origin_point.lat, rtl_path.origin_point.lng, 
+                                    rtl_path.return_target.alt, rtl_path.return_target.get_alt_frame());
 
     // descent target is below return target at rtl_alt_final
-    rtl_path.descent_target = Location(rtl_path.return_target.lat, rtl_path.return_target.lng, g.rtl_alt_final, Location::AltFrame::ABOVE_HOME);
+    rtl_path.descent_target = Location(rtl_path.return_target.lat, rtl_path.return_target.lng, 
+                                    g.rtl_alt_final, Location::AltFrame::ABOVE_ORIGIN);
 
     // set land flag
     rtl_path.land = g.rtl_alt_final <= 0;
@@ -529,7 +532,7 @@ void ModeRTL::compute_return_target()
     }
 
     // set returned target alt to new target_alt (don't change altitude type)
-    rtl_path.return_target.set_alt_cm(target_alt, (alt_type == ReturnTargetAltType::RELATIVE) ? Location::AltFrame::ABOVE_HOME : Location::AltFrame::ABOVE_TERRAIN);
+    rtl_path.return_target.set_alt_cm(copter.current_loc.alt+g.rtl_altitude, Location::AltFrame::ABOVE_ORIGIN );
 
 #if AP_FENCE_ENABLED
     // ensure not above fence altitude if alt fence is enabled
@@ -551,8 +554,10 @@ void ModeRTL::compute_return_target()
 
     // ensure we do not descend
     // max return the one that is big than among the pair
+    
     // rtl_path.return_target.alt = MAX(rtl_path.return_target.alt, curr_alt);
-    rtl_path.return_target.alt = curr_alt + g.rtl_altitude;
+    
+    //rtl_path.return_target.alt = copter.current_loc.alt + g.rtl_altitude; // alt above origin
 }
 
 bool ModeRTL::get_wp(Location& destination) const

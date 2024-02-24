@@ -26,8 +26,22 @@ class UserCode {
         uint16_t flow_value = 0;
         uint8_t mission_timer_not_to_monitor_flow_at_start_waypoint = 0;
         uint8_t flow_index = 0;
+        int8_t number_switch_to_rngfnd = 0;
+        int32_t takeoff_baro_offset =0;
+        float theta_alt_wp = 0;
+        float next_theta_alt_wp = 0;
+        bool is_origin_set = false;
+        bool is_home_set = false;
         bool spray_at_16_even = false;
-        bool auto_has_been_on_rngfnd = false;
+        bool is_on_rngfnd = false;
+        // float alt_transit_offset = 0;
+        float _alt_offset_gps_alt;
+        float _alt_transit_to_gps;
+        float _alt_transit_to_rngfnd;
+        bool can_switch_to_rngfnd = false;
+        bool transit_to_loiter = false;
+        bool takeoff_done = false;
+        // bool reset_target_to_gps = false;
         Location mission_breakpoint;
         mavlink_mission_item_int_t current_mission_waypoint_finish_point;
         

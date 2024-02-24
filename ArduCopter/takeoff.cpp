@@ -125,7 +125,7 @@ void Mode::auto_takeoff_run()
         // do not spool down tradheli when on the ground with motor interlock enabled
         make_safe_ground_handling(copter.is_tradheli() && motors->get_interlock());
         // update auto_takeoff_no_nav_alt_cm
-        auto_takeoff_no_nav_alt_cm = inertial_nav.get_position_z_up_cm() + g2.wp_navalt_min * 100;
+        auto_takeoff_no_nav_alt_cm = (copter.baro_alt - copter.userCode.takeoff_baro_offset) + g2.wp_navalt_min * 100;
         return;
     }
 
@@ -136,7 +136,6 @@ void Mode::auto_takeoff_run()
         copter.failsafe_terrain_on_event();
         return;
     }
-
     // set motors to full range
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
@@ -161,7 +160,7 @@ void Mode::auto_takeoff_run()
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->input_thrust_vector_rate_heading(pos_control->get_thrust_vector(), 0.0);
         // update auto_takeoff_no_nav_alt_cm
-        auto_takeoff_no_nav_alt_cm = inertial_nav.get_position_z_up_cm() + g2.wp_navalt_min * 100;
+        auto_takeoff_no_nav_alt_cm = (copter.baro_alt - copter.userCode.takeoff_baro_offset) + g2.wp_navalt_min * 100;
         return;
     }
     
@@ -179,7 +178,7 @@ void Mode::auto_takeoff_run()
         if (throttle >= 0.9 || 
             (copter.pos_control->get_z_accel_cmss() >= 0.5 * copter.pos_control->get_max_accel_z_cmss()) ||
             (copter.pos_control->get_vel_desired_cms().z >= 0.1 * copter.pos_control->get_max_speed_up_cms()) || 
-            ( auto_takeoff_no_nav_active && (inertial_nav.get_position_z_up_cm() >= auto_takeoff_no_nav_alt_cm))) {
+            ( auto_takeoff_no_nav_active && ((copter.baro_alt - copter.userCode.takeoff_baro_offset) >= auto_takeoff_no_nav_alt_cm))) {
             // throttle > 90%
             // acceleration > 50% maximum acceleration
             // velocity > 10% maximum velocity
@@ -192,7 +191,7 @@ void Mode::auto_takeoff_run()
     // check if we are not navigating because of low altitude
     if (auto_takeoff_no_nav_active) {
         // check if vehicle has reached no_nav_alt threshold
-        if (inertial_nav.get_position_z_up_cm() >= auto_takeoff_no_nav_alt_cm) {
+        if ((copter.baro_alt - copter.userCode.takeoff_baro_offset) >= auto_takeoff_no_nav_alt_cm) {
             auto_takeoff_no_nav_active = false;
         }
         pos_control->relax_velocity_controller_xy();
@@ -204,12 +203,16 @@ void Mode::auto_takeoff_run()
     pos_control->update_xy_controller();
 
     // command the aircraft to the take off altitude
-    float pos_z = auto_takeoff_complete_alt_cm + terr_offset;
+    float pos_z = auto_takeoff_complete_alt_cm;// + terr_offset;
     float vel_z = 0.0;
     copter.pos_control->input_pos_vel_accel_z(pos_z, vel_z, 0.0);
-    
+    if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+    if(AP_HAL::millis() - _debug_timer >= 500){
+        gcs().send_text(MAV_SEVERITY_INFO,"takeoff_tar: %.2f, br: %.2f, b_fs: %.2f" ,pos_z , float(copter.baro_alt),float(copter.userCode.takeoff_baro_offset));
+        _debug_timer = 0;
+    }
     // run the vertical position controller and set output throttle
-    pos_control->update_z_controller();
+    pos_control->update_z_controller(copter.baro_alt - copter.userCode.takeoff_baro_offset);
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
@@ -234,11 +237,14 @@ void Mode::auto_takeoff_run()
 
     // calculate completion for location in case it is needed for a smooth transition to wp_nav
     if (auto_takeoff_complete) {
+        copter.userCode.takeoff_done = true;
         const Vector3p& complete_pos = copter.pos_control->get_pos_target_cm();
-        auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, pos_z};
+        // auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, pos_z};
+        auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, complete_pos.z};
+        gcs().send_text(MAV_SEVERITY_INFO," stopping_alt: %.2f baro_alt:%.2f", auto_takeoff_complete_pos.z, float(copter.baro_alt));
     }
 }
-
+// Sitha: from mode_auto.cpp auto_takeoff_start(dest_loc.alt, false);
 void Mode::auto_takeoff_start(float complete_alt_cm, bool terrain_alt)
 {
     // auto_takeoff_complete_alt_cm is a problem if equal to auto_takeoff_start_alt_cm
@@ -246,7 +252,9 @@ void Mode::auto_takeoff_start(float complete_alt_cm, bool terrain_alt)
     auto_takeoff_terrain_alt = terrain_alt;
     auto_takeoff_complete = false;
     // initialise auto_takeoff_no_nav_alt_cm
-    auto_takeoff_no_nav_alt_cm = inertial_nav.get_position_z_up_cm() + g2.wp_navalt_min * 100;
+    auto_takeoff_no_nav_alt_cm = (copter.baro_alt - copter.userCode.takeoff_baro_offset) + g2.wp_navalt_min * 100;
+    auto_takeoff_complete_alt_cm = MAX((g2.wp_navalt_min * 100), auto_takeoff_complete_alt_cm);
+    gcs().send_text(MAV_SEVERITY_INFO,"alt_takeoff: %.2f, alt_now:%.2f" ,auto_takeoff_complete_alt_cm , float(copter.baro_alt - copter.userCode.takeoff_baro_offset));
     if ((g2.wp_navalt_min > 0) && (is_disarmed_or_landed() || !motors->get_interlock())) {
         // we are not flying, climb with no navigation to current alt-above-ekf-origin + wp_navalt_min
         auto_takeoff_no_nav_active = true;

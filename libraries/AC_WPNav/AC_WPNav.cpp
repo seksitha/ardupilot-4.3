@@ -211,7 +211,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
     // Sitha: can be takeoff alt or a previous destination
     // only run when after takeoff or a stopping which is default 0 then alt is previous set destination
     // if it is an interrupt mission it is the same value from last set
-    _origin.z = _destination.z =  stopping_point.z;
+    // _origin.z = _destination.z =  stopping_point.z;
     _used_terrain_alt = false;
     _this_leg_is_spline = false;
 
@@ -269,7 +269,7 @@ bool AC_WPNav::set_wp_destination_loc(const Location& destination)
     if (!get_vector_NEU(destination, dest_neu, used_terrain_alt)) {
         return false;
     }
-
+    
     // set target as vector from EKF origin
     return set_wp_destination(dest_neu, used_terrain_alt);
 }
@@ -318,14 +318,14 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool used_terrain
     // use previous destination as origin
     // sitha: do_nav_wp => wp_nav->wp_and_spline_init(0, stopping_point); where stopping_point is from takeoff
     // sitha: do_nav_wp => wp_nav->set_wp_destination_loc(dest_loc) 
-    _origin = _destination; // Sitha: set _destination.z @advance_along_track
     
+    _origin = _destination; // Sitha: set _destination.z @advance_along_track
     // update destination
     _destination = destination; //destination is mission cmd
-
+    if(copter.get_mode()==3) _destination.z = destination.z + _pilot_clime_cm;
     _used_terrain_alt = used_terrain_alt;
     // reset clime alt and wait for pilot throttle cmd again
-    _pilot_clime_cm = 0.00f;
+    // _pilot_clime_cm = 0.00f;
     if(copter.mode_auto.mission.get_current_nav_index() >= 2 && copter.get_mode()!=6 ){ // not to do in RTL 
         _destination.y = _destination.y+(_corect_coordinate_we * 100);
         _destination.x = _destination.x+(_corect_coordinate_ns * 100);
@@ -393,7 +393,8 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool used_te
         return true;
     }
 
-        Vector3f next_dest = destination;
+    Vector3f next_dest = destination; 
+    if(copter.get_mode()==3) next_dest.z = destination.z + _pilot_clime_cm;
     if(copter.mode_auto.mission.get_current_nav_index() > 1 /*not takeoff*/ && copter.get_mode()!=6 ){ // not to do in RTL 
         next_dest.y = next_dest.y+(_corect_coordinate_we * 100);
         next_dest.x = next_dest.x+(_corect_coordinate_ns * 100);
@@ -526,7 +527,8 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     /** End of terrain offset */
     
     // get current position and adjust altitude to origin and destination's frame (i.e. _frame)
-    const Vector3f &curr_pos = _inav.get_position_neu_cm() - Vector3f{0, 0, terr_offset};
+    Vector3f curr_pos = _inav.get_position_neu_cm() - Vector3f{0, 0, terr_offset};
+    if(copter.rangefinder_state.enabled && copter.userCode.can_switch_to_rngfnd) curr_pos.z = copter.rangefinder_state.terrain_offset_cm;
     Vector3f curr_target_vel = _pos_control.get_vel_desired_cms();
     curr_target_vel.z -= _pos_control.get_vel_offset_z_cms();
 
@@ -593,33 +595,37 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // test with SITL carefull with throttle not come back to 1500
         // limit height 20m up only Test with and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going up
-        _pilot_clime_cm < 2000 ? _pilot_clime_cm = (_pilot_clime_cm + ((float)throttle_val/5000)) : _pilot_clime_cm;
+        _pilot_clime_cm = _pilot_clime_cm + ((float)throttle_val/5000);
+        _origin.z += ((float)throttle_val/5000);
+        _destination.z += ((float)throttle_val/5000);
     }
     // negative throttle
     else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // limit height -10monly
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
-        _pilot_clime_cm = (_pilot_clime_cm - 0.3);
+        _pilot_clime_cm = (_pilot_clime_cm - (2000-throttle_val)/3000.f);
+        _origin.z -= (2000-throttle_val)/3000.0f;
+        _destination.z -= (2000-throttle_val)/3000.0f;
     }
     // mid stick 
     else if (throttle_val > 1450  && throttle_val < 1510){
         // if we set like this, it is going to be reverted to original alt which copter stay at mission alt
         // so this should comment out. 
-        // _pilot_clime_cm = 0.0f;
-        // _flags_change_alt_by_pilot= false;
+        //_pilot_clime_cm = 0.0f;
+        _flags_change_alt_by_pilot = false;
     }
     // convert final_target.z to altitude above the ekf origin
     
     
-    if(_flags_change_alt_by_pilot){
-        // target_pos.z is set to mission.item.z every loop so not an increment val 
-        // that why increment is implement each loop
-        target_pos.z = target_pos.z + _pilot_clime_cm;
+    // if(_flags_change_alt_by_pilot){
+    //     // target_pos.z is set to mission.item.z every loop so not an increment val 
+    //     // that why increment is implement each loop
+    //     target_pos.z = target_pos.z + _pilot_clime_cm;
 
-        // Sitha: this to ensure next origin is set to new alt
-        _destination.z = target_pos.z;
-    }
+    //     // Sitha: this to ensure next origin is set to new alt
+    //     _destination.z = target_pos.z;
+    // }
     
 
     // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't do this

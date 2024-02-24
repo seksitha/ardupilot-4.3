@@ -72,9 +72,51 @@ void Copter::userhook_MediumLoop()
 void Copter::userhook_SlowLoop()
 {
     // put your 3.3Hz code here
+    if(!arming.is_armed()){
+        copter.wp_nav->reset_param_on_start_mission();
+        userCode.takeoff_baro_offset = 0;
+        userCode.is_origin_set=false;
+        userCode.is_home_set=false;
+        copter.userCode.is_on_rngfnd =false;
+        userCode.transit_to_loiter = false;
+        userCode.takeoff_done = false;
+    }
 
+    // if(!copter.motors->armed() || copter.get_mode() != 4 /**Loiter*/){
+    //     userCode.reset_target_to_gps = false;
+    // }
 
+    if(copter.get_mode() != 3 /**Auto*/){
+        userCode._alt_transit_to_rngfnd = 0;
+        userCode._alt_transit_to_gps = 0;
+        userCode.can_switch_to_rngfnd = false;
+    }
 
+    if(arming.is_armed()){ 
+        if(userCode.takeoff_baro_offset == 0){
+            userCode.takeoff_baro_offset = copter.baro_alt;
+        }
+
+        if(!userCode.is_home_set){
+            if(!userCode.is_home_set){
+                Location cur_pos;
+                ahrs.get_location(cur_pos);
+                cur_pos.set_alt_cm(copter.gps.location().alt,Location::AltFrame::ABSOLUTE); 
+                bool ret = ahrs.set_origin(cur_pos);
+                if(ret) userCode.is_origin_set = true;
+            }
+            if(userCode.is_origin_set and !userCode.is_home_set){
+                Location cur_ori;
+                bool ret =  ahrs.get_origin(cur_ori);
+                //cur_ori.set_alt_cm(0,Location::AltFrame::ABSOLUTE);;
+                bool is_set = false;
+                if(ret) is_set= ahrs.set_home(cur_ori);
+                if (is_set) userCode.is_home_set=true;
+                gcs().send_text(MAV_SEVERITY_INFO,"origin_home_set ok %0.2f", (float)cur_ori.alt);
+            }
+        }
+    }
+    
     /*FLOWSENSOR */
     if(get_mode()==3 && userCode.cmd_16_index > 1){
         // not to trigger the flow sensor at the beginning of the mission.
@@ -122,10 +164,11 @@ void Copter::userhook_SlowLoop()
     */ 
 
     if(mode_auto.mission.state() == 2 and copter.wp_nav->loiter_state_after_mission_completed == false && copter.get_mode()==3 && motors->armed()){
-        copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
         userCode.set_pump_spinner_pwm(false);   
         copter.wp_nav->loiter_state_after_mission_completed = true;
         gcs().send_text(MAV_SEVERITY_INFO, "# Mission Complete");
+        userCode.transit_to_loiter = false;
+        copter.set_mode(Mode::Number::LOITER, ModeReason::MISSION_END);
     }
     // stop spray on RTL when has water
     if(copter.get_mode()==6 && motors->armed()){
@@ -291,7 +334,6 @@ void Copter::userhook_SuperSlowLoop()
         // mode_auto.cmd_16_index = 0; // set this will make break by user no spray untill land
         if(!motors->armed()) { // prevent on take off set current waypoint the old user break point
             copter.wp_nav->break_auto_by_user_state = false;
-            copter.wp_nav->reset_param_on_start_mission();
             copter.wp_nav->loiter_state_after_mission_completed = false;
         }
     }

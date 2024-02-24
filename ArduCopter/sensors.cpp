@@ -4,9 +4,8 @@
 void Copter::read_barometer(void)
 {
     barometer.update();
-
-    baro_alt = barometer.get_altitude() * 100.0f;
-
+    int32_t alt = barometer.get_altitude() * 100.0f;
+    baro_alt += (alt - baro_alt) * (0.75f);
     motors->set_air_density_ratio(barometer.get_air_density_ratio());
 }
 

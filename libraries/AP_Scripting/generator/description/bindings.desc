@@ -220,7 +220,7 @@ singleton AP_Vehicle method set_target_location boolean Location
 singleton AP_Vehicle method get_target_location boolean Location'Null
 singleton AP_Vehicle method update_target_location boolean Location Location
 singleton AP_Vehicle method set_target_pos_NED boolean Vector3f boolean float -360 +360 boolean float'skip_check boolean boolean
-singleton AP_Vehicle method set_target_posvel_NED boolean Vector3f Vector3f
+singleton AP_Vehicle method set_target_posvel_NED boolean Vector3f Vector3f boolean
 singleton AP_Vehicle method set_target_posvelaccel_NED boolean Vector3f Vector3f Vector3f boolean float -360 +360 boolean float'skip_check boolean
 singleton AP_Vehicle method set_target_velaccel_NED boolean Vector3f Vector3f boolean float -360 +360 boolean float'skip_check boolean
 singleton AP_Vehicle method set_target_velocity_NED boolean Vector3f
@@ -240,6 +240,7 @@ singleton AP_Vehicle method set_desired_speed boolean float'skip_check
 singleton AP_Vehicle method nav_scripting_enable boolean uint8_t 0 UINT8_MAX
 singleton AP_Vehicle method set_velocity_match boolean Vector2f
 singleton AP_Vehicle method has_ekf_failsafed boolean
+singleton AP_Vehicle method get_nav_pos_z_cm float
 
 include AP_SerialLED/AP_SerialLED.h
 singleton AP_SerialLED rename serialLED

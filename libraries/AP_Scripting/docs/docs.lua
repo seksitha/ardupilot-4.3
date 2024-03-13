@@ -1484,7 +1484,7 @@ function vehicle:set_target_posvelaccel_NED(target_pos, target_vel, target_accel
 ---@param target_pos Vector3f_ud
 ---@param target_vel Vector3f_ud
 ---@return boolean
-function vehicle:set_target_posvel_NED(target_pos, target_vel) end
+function vehicle:set_target_posvel_NED(target_pos, target_vel, rngfnd) end
 
 -- desc
 ---@param target_pos Vector3f_ud
@@ -1506,6 +1506,11 @@ function vehicle:update_target_location(current_target, new_target) end
 -- desc
 ---@return Location_ud|nil
 function vehicle:get_target_location() end
+
+-- desc
+---@return integer
+function vehicle:get_nav_pos_z_cm() end
+
 
 -- desc
 ---@param target_loc Location_ud

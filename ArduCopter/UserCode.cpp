@@ -80,11 +80,15 @@ void Copter::userhook_SlowLoop()
         copter.userCode.is_on_rngfnd =false;
         userCode.transit_to_loiter = false;
         userCode.takeoff_done = false;
+        userCode.pilot_climb_cm = 0;
     }
 
     // if(!copter.motors->armed() || copter.get_mode() != 4 /**Loiter*/){
     //     userCode.reset_target_to_gps = false;
     // }
+    if(copter.get_mode() != 4){
+        userCode.pilot_climb_cm = 0;
+    }
 
     if(copter.get_mode() != 3 /**Auto*/){
         userCode._alt_transit_to_rngfnd = 0;
@@ -135,7 +139,7 @@ void Copter::userhook_SlowLoop()
 
         // gcs().send_text(MAV_SEVERITY_INFO, "check %i",userCode.cmd_16_index);
         // if empty tank stop copter
-        if (userCode.mission_timer_not_to_monitor_flow_at_start_waypoint >= delay_monitor_flow && RC_Channels::get_radio_in(6) > 1400 ){  //radio chan7 > 1400
+        if (userCode.mission_timer_not_to_monitor_flow_at_start_waypoint >= delay_monitor_flow ){  //radio chan7 > 1400
             uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5
             // uint16_t flow_val = hal.gpio->read(54); //       v5+
             userCode.flow_value = userCode.flow_value + flow_val ;
@@ -197,7 +201,7 @@ void Copter::userhook_SuperSlowLoop()
         userCode.pump_off_on_boot = true;
     }
     // switch the pump on by RC
-    if (copter.get_mode()!=3 /*not auto*/ && userCode.chan_pump && userCode.chan_spinner && userCode.pump_off_on_boot){
+    if (copter.get_mode()!=3 /*not auto*/ && copter.get_mode()!=4 /*not guided*/ && userCode.chan_pump && userCode.chan_spinner && userCode.pump_off_on_boot){
         if (RC_Channels::get_radio_in(6) > 1550){
             uint16_t flow_val = hal.gpio->read(copter.wp_nav->_sensor_pin); // nano  v5 pin 60
             // uint16_t flow_val = hal.gpio->read(54); //       v5+

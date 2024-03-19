@@ -310,13 +310,13 @@ bool Copter::set_target_pos_NED(const Vector3f& target_pos, bool use_yaw, float 
 }
 
 // set target position and velocity (for use by scripting)
-bool Copter::set_target_posvel_NED(const Vector3f& target_pos, const Vector3f& target_vel)
+bool Copter::set_target_posvel_NED(const Vector3f& target_pos, const Vector3f& target_vel,bool used_rngfnd)
 {
     // exit if vehicle is not in Guided mode or Auto-Guided mode
     if (!flightmode->in_guided_mode()) {
         return false;
     }
-
+    userCode.guided_used_rngfnd = used_rngfnd;
     const Vector3f pos_neu_cm(target_pos.x * 100.0f, target_pos.y * 100.0f, -target_pos.z * 100.0f);
     const Vector3f vel_neu_cms(target_vel.x * 100.0f, target_vel.y * 100.0f, -target_vel.z * 100.0f);
 
@@ -437,6 +437,7 @@ bool Copter::has_ekf_failsafed() const
 {
     return failsafe.ekf;
 }
+float Copter::get_nav_pos_z_cm () {return inertial_nav.get_position_z_up_cm();};
 
 #endif // AP_SCRIPTING_ENABLED
 

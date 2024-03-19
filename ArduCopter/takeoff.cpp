@@ -206,11 +206,11 @@ void Mode::auto_takeoff_run()
     float pos_z = auto_takeoff_complete_alt_cm;// + terr_offset;
     float vel_z = 0.0;
     copter.pos_control->input_pos_vel_accel_z(pos_z, vel_z, 0.0);
-    if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-    if(AP_HAL::millis() - _debug_timer >= 500){
-        gcs().send_text(MAV_SEVERITY_INFO,"takeoff_tar: %.2f, br: %.2f, b_fs: %.2f" ,pos_z , float(copter.baro_alt),float(copter.userCode.takeoff_baro_offset));
-        _debug_timer = 0;
-    }
+    // if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+    // if(AP_HAL::millis() - _debug_timer >= 500){
+    //     gcs().send_text(MAV_SEVERITY_INFO,"takeoff_tar: %.2f, br: %.2f, b_fs: %.2f" ,pos_z , float(copter.baro_alt),float(copter.userCode.takeoff_baro_offset));
+    //     _debug_timer = 0;
+    // }
     // run the vertical position controller and set output throttle
     pos_control->update_z_controller(copter.baro_alt - copter.userCode.takeoff_baro_offset);
 
@@ -241,7 +241,7 @@ void Mode::auto_takeoff_run()
         const Vector3p& complete_pos = copter.pos_control->get_pos_target_cm();
         // auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, pos_z};
         auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, complete_pos.z};
-        gcs().send_text(MAV_SEVERITY_INFO," stopping_alt: %.2f baro_alt:%.2f", auto_takeoff_complete_pos.z, float(copter.baro_alt));
+        // gcs().send_text(MAV_SEVERITY_INFO," stopping_alt: %.2f baro_alt:%.2f", auto_takeoff_complete_pos.z, float(copter.baro_alt));
     }
 }
 // Sitha: from mode_auto.cpp auto_takeoff_start(dest_loc.alt, false);

@@ -149,7 +149,8 @@ bool ModeGuided::do_user_takeoff_start(float takeoff_alt_cm)
 
     // initialise alt for WP_NAVALT_MIN and set completion alt
     auto_takeoff_start(alt_target_cm, alt_target_terrain);
-
+    // Sitha: has modify takeoff to use baro 
+    // pos_control->update_z_controller(copter.baro_alt - copter.userCode.takeoff_baro_offset);
     // record takeoff has not completed
     takeoff_complete = false;
 
@@ -977,13 +978,65 @@ void ModeGuided::posvelaccel_control_run()
         INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
     }
 
-    float pz = guided_pos_target_cm.z;
-    pos_control->input_pos_vel_accel_z(pz, guided_vel_target_cms.z, guided_accel_target_cmss.z, false);
-    guided_pos_target_cm.z = pz;
-
+    
+    /* ALT: Altitude*/
+    int32_t throttle_val = copter.channel_throttle->get_radio_in();
+    // positive throttle
+    if (throttle_val > 1550 ){
+        // test with SITL carefull with throttle not come back to 1500
+        copter.userCode.pilot_climb_cm += ((float)throttle_val/5000.0f);
+    }
+    // negative throttle
+    else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
+        // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
+        copter.userCode.pilot_climb_cm -=((2000-throttle_val)/3000.0f);
+    }
+    // mid stick 
+    else if (throttle_val > 1450  && throttle_val < 1510){
+        // if we set like this, it is going to be reverted to original alt which copter stay at mission alt
+        // so this should comment out. 
+        // copter.userCode.pilot_climb_cm = 0;
+    }
+    
     // run position controllers
     pos_control->update_xy_controller();
-    pos_control->update_z_controller();
+    float pz = guided_pos_target_cm.z;
+    pz = pz + copter.userCode.pilot_climb_cm;
+    
+    // should check if the rngfnd is healthy or it will be a big problem
+    if(copter.userCode.guided_used_rngfnd && copter.rangefinder_state.enabled == true && copter.rangefinder_state.alt_healthy
+        && copter.rangefinder.has_orientation(ROTATION_PITCH_270)){ 
+        if(fabsf( copter.userCode._alt_transit_to_rngfnd)) {
+            pos_control->set_pos_target_z_cm(copter.userCode._alt_transit_to_rngfnd);
+            copter.userCode._alt_transit_to_rngfnd = 0;
+        } 
+        copter.userCode._alt_transit_to_gps = inertial_nav.get_position_z_up_cm();
+        pos_control->input_pos_vel_accel_z(pz, guided_vel_target_cms.z, guided_accel_target_cmss.z, false);
+        // pos_control->set_pos_target_z_cm(pz);
+        pos_control->update_z_controller(copter.rangefinder_state.terrain_offset_cm);
+
+    } else{
+
+        if(fabsf(copter.userCode._alt_transit_to_gps) > 0 ){
+            pos_control->set_pos_target_z_cm(copter.userCode._alt_transit_to_gps);
+            copter.userCode._alt_transit_to_gps = 0;
+        }
+        copter.userCode._alt_transit_to_rngfnd = inertial_nav.get_position_z_up_cm();
+        pos_control->input_pos_vel_accel_z(pz, guided_vel_target_cms.z, guided_accel_target_cmss.z, false);
+        pos_control->update_z_controller();
+        if(copter.rangefinder_state.alt_healthy){
+            float pos_rngfnd = copter.rangefinder_state.terrain_offset_cm;
+            copter.userCode._alt_transit_to_rngfnd = pos_rngfnd;
+        }
+    }
+    
+    if(motors->armed()){
+        if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+        if(AP_HAL::millis() - _debug_timer >= 500){
+            gcs().send_text(MAV_SEVERITY_INFO,"%s_tar:%.2f, pz:%.2f",copter.userCode.guided_used_rngfnd?"rngfnd":"gps",pos_control->get_pos_target_z_cm(), pz);
+            _debug_timer = 0;
+        }
+    }
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {

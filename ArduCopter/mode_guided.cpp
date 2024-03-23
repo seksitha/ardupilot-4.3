@@ -984,29 +984,29 @@ void ModeGuided::posvelaccel_control_run()
     // positive throttle
     if (throttle_val > 1550 ){
         // test with SITL carefull with throttle not come back to 1500
-        copter.userCode.pilot_climb_cm += ((float)throttle_val/5000.0f);
+        copter.userCode.pilot_climb_cm_guided += ((float)throttle_val/5000.0f);
     }
     // negative throttle
     else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
-        copter.userCode.pilot_climb_cm -=((2000-throttle_val)/3000.0f);
+        copter.userCode.pilot_climb_cm_guided -=((2000-throttle_val)/3000.0f);
     }
     // mid stick 
     else if (throttle_val > 1450  && throttle_val < 1510){
         // if we set like this, it is going to be reverted to original alt which copter stay at mission alt
         // so this should comment out. 
-        // copter.userCode.pilot_climb_cm = 0;
+        // copter.userCode.pilot_climb_cm_guided = 0;
     }
     
     // run position controllers
     pos_control->update_xy_controller();
     float pz = guided_pos_target_cm.z;
-    pz = pz + copter.userCode.pilot_climb_cm;
+    pz = pz + copter.userCode.pilot_climb_cm_guided;
     
     // should check if the rngfnd is healthy or it will be a big problem
     if(copter.userCode.guided_used_rngfnd && copter.rangefinder_state.enabled == true && copter.rangefinder_state.alt_healthy
         && copter.rangefinder.has_orientation(ROTATION_PITCH_270)){ 
-        if(fabsf( copter.userCode._alt_transit_to_rngfnd)) {
+        if(fabsf( copter.userCode._alt_transit_to_rngfnd) > 0) {
             pos_control->set_pos_target_z_cm(copter.userCode._alt_transit_to_rngfnd);
             copter.userCode._alt_transit_to_rngfnd = 0;
         } 

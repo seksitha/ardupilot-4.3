@@ -41,8 +41,10 @@ class UserCode {
         bool can_switch_to_rngfnd = false;
         bool transit_to_loiter = false;
         bool takeoff_done = false;
-        float pilot_climb_cm = 0;
+        float pilot_climb_cm_guided = 0;
         bool guided_used_rngfnd = false;
+        float yaw_auto = 0;
+        float pilot_alt_cm_rng_auto = 0;
         // bool reset_target_to_gps = false;
         Location mission_breakpoint;
         mavlink_mission_item_int_t current_mission_waypoint_finish_point;

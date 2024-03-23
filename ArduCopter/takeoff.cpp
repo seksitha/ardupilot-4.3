@@ -239,9 +239,9 @@ void Mode::auto_takeoff_run()
     if (auto_takeoff_complete) {
         copter.userCode.takeoff_done = true;
         const Vector3p& complete_pos = copter.pos_control->get_pos_target_cm();
-        // auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, pos_z};
-        auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, complete_pos.z};
-        // gcs().send_text(MAV_SEVERITY_INFO," stopping_alt: %.2f baro_alt:%.2f", auto_takeoff_complete_pos.z, float(copter.baro_alt));
+        // use 
+        auto_takeoff_complete_pos = Vector3p{complete_pos.x, complete_pos.y, inertial_nav.get_position_z_up_cm()};
+        gcs().send_text(MAV_SEVERITY_INFO," stopping_alt: %.2f baro_alt:%.2f", auto_takeoff_complete_pos.z, float(copter.baro_alt));
     }
 }
 // Sitha: from mode_auto.cpp auto_takeoff_start(dest_loc.alt, false);

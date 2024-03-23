@@ -133,7 +133,6 @@ AC_WPNav::AC_WPNav(const AP_InertialNav& inav, const AP_AHRS_View& ahrs, AC_PosC
 
 void AC_WPNav::reset_param_on_start_mission(){ // in case the drone land and new mission?
     _flags_change_alt_by_pilot =false;
-    _pilot_clime_cm = 0.0f;
 }
 
 // get expected source of terrain data if alt-above-terrain command is executed (used by Copter's ModeRTL)
@@ -322,10 +321,11 @@ bool AC_WPNav::set_wp_destination(const Vector3f& destination, bool used_terrain
     _origin = _destination; // Sitha: set _destination.z @advance_along_track
     // update destination
     _destination = destination; //destination is mission cmd
-    if(copter.get_mode()==3) _destination.z = destination.z + _pilot_clime_cm;
+    // not rtl
+    if(copter.userCode.is_on_rngfnd && copter.get_mode()==3) _destination.z = copter.userCode.pilot_alt_cm_rng_auto;
+    if(!copter.userCode.is_on_rngfnd && copter.get_mode()==3) _destination.z = _origin.z;
     _used_terrain_alt = used_terrain_alt;
     // reset clime alt and wait for pilot throttle cmd again
-    // _pilot_clime_cm = 0.00f;
     if(copter.mode_auto.mission.get_current_nav_index() >= 2 && copter.get_mode()!=6 ){ // not to do in RTL 
         _destination.y = _destination.y+(_corect_coordinate_we * 100);
         _destination.x = _destination.x+(_corect_coordinate_ns * 100);
@@ -394,7 +394,8 @@ bool AC_WPNav::set_wp_destination_next(const Vector3f& destination, bool used_te
     }
 
     Vector3f next_dest = destination; 
-    if(copter.get_mode()==3) next_dest.z = destination.z + _pilot_clime_cm;
+    if(copter.userCode.is_on_rngfnd && copter.get_mode()==3) next_dest.z = copter.userCode.pilot_alt_cm_rng_auto;
+    if(!copter.userCode.is_on_rngfnd && copter.get_mode()==3) next_dest.z = _destination.z;
     if(copter.mode_auto.mission.get_current_nav_index() > 1 /*not takeoff*/ && copter.get_mode()!=6 ){ // not to do in RTL 
         next_dest.y = next_dest.y+(_corect_coordinate_we * 100);
         next_dest.x = next_dest.x+(_corect_coordinate_ns * 100);
@@ -595,7 +596,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // test with SITL carefull with throttle not come back to 1500
         // limit height 20m up only Test with and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going up
-        _pilot_clime_cm = _pilot_clime_cm + ((float)throttle_val/5000);
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto + ((float)throttle_val/5000);
         _origin.z += ((float)throttle_val/5000);
         _destination.z += ((float)throttle_val/5000);
     }
@@ -604,7 +605,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // limit height -10monly
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
-        _pilot_clime_cm = (_pilot_clime_cm - (2000-throttle_val)/3000.f);
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = (copter.userCode.pilot_alt_cm_rng_auto - (2000-throttle_val)/3000.f);
         _origin.z -= (2000-throttle_val)/3000.0f;
         _destination.z -= (2000-throttle_val)/3000.0f;
     }
@@ -612,20 +613,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     else if (throttle_val > 1450  && throttle_val < 1510){
         // if we set like this, it is going to be reverted to original alt which copter stay at mission alt
         // so this should comment out. 
-        //_pilot_clime_cm = 0.0f;
         _flags_change_alt_by_pilot = false;
     }
     // convert final_target.z to altitude above the ekf origin
-    
-    
-    // if(_flags_change_alt_by_pilot){
-    //     // target_pos.z is set to mission.item.z every loop so not an increment val 
-    //     // that why increment is implement each loop
-    //     target_pos.z = target_pos.z + _pilot_clime_cm;
-
-    //     // Sitha: this to ensure next origin is set to new alt
-    //     _destination.z = target_pos.z;
-    // }
     
 
     // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't do this

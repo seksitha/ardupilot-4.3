@@ -974,7 +974,7 @@ void ModeAuto::wp_run()
     float target_yaw_rate = 0;
     if (!copter.failsafe.radio && use_pilot_yaw()) {
         // get pilot's desired yaw rate
-        target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz());
+        target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz()); // dz return percentage >1500 0-100% <1500 0-(-100%)
         if (!is_zero(target_yaw_rate)) {
             auto_yaw.set_mode(AUTO_YAW_HOLD);
         }
@@ -993,7 +993,7 @@ void ModeAuto::wp_run()
     // swtich rngfnd on by user or rngfnd is available
     float alt_source = 0;
     if(
-        copter.rangefinder_state.enabled == true && copter.rangefinder_state.alt_healthy
+        copter.mode_auto.mission.get_current_nav_index() > 2 && copter.rangefinder_state.enabled == true && copter.rangefinder_state.alt_healthy
         && copter.rangefinder.has_orientation(ROTATION_PITCH_270) && copter.userCode.can_switch_to_rngfnd )
     { // take this from RC_chanel when chanel high
         const float rngfnd_alt_cm = copter.rangefinder_state.terrain_offset_cm;
@@ -1005,12 +1005,12 @@ void ModeAuto::wp_run()
         if( fabsf(copter.userCode._alt_transit_to_rngfnd) > 0){
             // wpnav advance_target_along_track set pos_target_z each loop to pos_origin
             // so we need to modify origin and destination too
-            wp_nav->set_wp_destination_z_cm(copter.userCode.number_switch_to_rngfnd == 0 ? copter.mode_auto.mission.get_current_nav_cmd().content.location.alt : copter.userCode._alt_transit_to_rngfnd);
+            wp_nav->set_wp_destination_z_cm(copter.userCode._alt_transit_to_rngfnd);
             wp_nav->set_wp_origin_z_cm(copter.userCode._alt_transit_to_rngfnd);
             pos_control->set_pos_target_z_cm(copter.userCode._alt_transit_to_rngfnd);
             gcs().send_text(MAV_SEVERITY_INFO,"switch to rngfnd success!" );
+            copter.userCode.pilot_alt_cm_rng_auto = copter.userCode._alt_transit_to_rngfnd;
             copter.userCode._alt_transit_to_rngfnd = 0;
-            copter.userCode.number_switch_to_rngfnd++;
         }
         
         alt_source = rngfnd_alt_cm;
@@ -1025,7 +1025,7 @@ void ModeAuto::wp_run()
         if(motors->armed()){
             if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
             if(AP_HAL::millis() - _debug_timer >= 1000){
-                gcs().send_text(MAV_SEVERITY_INFO,"rngfnd");
+                gcs().send_text(MAV_SEVERITY_INFO,"rngfnd: %.2f, %.2f", pos_control->get_pos_target_z_cm(),rngfnd_alt_cm);
                 _debug_timer = 0;
             }
         }
@@ -1049,18 +1049,18 @@ void ModeAuto::wp_run()
 
         alt_source = inertial_nav.get_position_z_up_cm();
 
-        if(copter.rangefinder_state.alt_healthy){
+        if(copter.rangefinder_state.alt_healthy && copter.mode_auto.mission.get_current_nav_index() > 2){
             float pos_rngfnd = copter.rangefinder_state.terrain_offset_cm;
             copter.userCode._alt_transit_to_rngfnd = pos_rngfnd;
             copter.userCode.can_switch_to_rngfnd = true;
         }
-        if(copter.userCode.can_switch_to_rngfnd and copter.rangefinder_state.enabled)  gcs().send_text(MAV_SEVERITY_INFO,"on_gps_with_tar: %2.f",pos_control->get_pos_target_z_cm());
+        if(copter.userCode.can_switch_to_rngfnd and copter.rangefinder_state.enabled)  gcs().send_text(MAV_SEVERITY_INFO,"gpsCanGoRng: %2.f",pos_control->get_pos_target_z_cm());
         copter.userCode.is_on_rngfnd = false;
 
         if(motors->armed()){
             if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
             if(AP_HAL::millis() - _debug_timer >= 1000){
-                gcs().send_text(MAV_SEVERITY_INFO,"gps");
+                gcs().send_text(MAV_SEVERITY_INFO,"gps: %.2f, %.2f", pos_control->get_pos_target_z_cm(),inertial_nav.get_position_z_up_cm());
                 _debug_timer = 0;
             }
         }
@@ -1079,8 +1079,15 @@ void ModeAuto::wp_run()
         // roll & pitch from waypoint controller, yaw rate from pilot
         attitude_control->input_thrust_vector_rate_heading(wp_nav->get_thrust_vector(), target_yaw_rate);
     } else {
-        // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw(), auto_yaw.rate_cds());
+        if(mission.get_current_nav_index() >= 4 &&  mission.get_current_nav_index()%2==0) {
+            Location cmd_current = mission.get_current_nav_cmd().content.location;
+            AP_Mission::Mission_Command next_cmd;
+            mission.get_next_nav_cmd(mission.get_current_nav_index()+1, next_cmd);
+            float bearing = cmd_current.get_bearing_to(next_cmd.content.location);
+            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), wrap_360_cd(bearing), auto_yaw.rate_cds());
+        }else {
+            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw(), auto_yaw.rate_cds());
+        }
     }
 }
 
@@ -1434,6 +1441,7 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
             INTERNAL_ERROR(AP_InternalError::error_t::flow_of_control);
         }
     }
+    
 
     // init wpnav and set origin if transitioning from takeoff
     if (!wp_nav->is_active()) { // Sitha: I confuse takeoff, (part of auto), as part of wp_nav it is not not
@@ -1445,7 +1453,7 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
                 stopping_point = takeoff_complete_pos.tofloat();
             }
         }
-        stopping_point.z = inertial_nav.get_position_z_up_cm(); //Sitha: switch to gps after take off
+        pos_control->set_pos_target_z_cm(stopping_point.z);
         wp_nav->wp_and_spline_init(0, stopping_point);
     }
 
@@ -1461,11 +1469,11 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     copter.userCode.theta_alt_wp = float(float(cmd.content.location.alt) / float(prev_cmd.content.location.alt));
     copter.userCode.next_theta_alt_wp = float(float(next_cmd.content.location.alt) /float(cmd.content.location.alt));
     copter.userCode.number_switch_to_rngfnd = 0;
-    gcs().send_text(MAV_SEVERITY_INFO, "thetha....: %.2f, %.2f, %.2f, %.2f", copter.userCode.theta_alt_wp,float(prev_cmd.content.location.alt),float(cmd.content.location.alt),pos_control->get_pos_target_z_cm());
 
     if(copter.rangefinder_state.enabled and copter.rangefinder_state.alt_healthy and copter.userCode.is_on_rngfnd){
-        dest_loc.change_alt_frame(Location::AltFrame::ABSOLUTE);
+        // dest_loc.set_alt_cm(copter.userCode.pilot_alt_cm_rng_auto,Location::AltFrame::ABSOLUTE);
     }
+    gcs().send_text(MAV_SEVERITY_INFO, "cmdAl,gps,tar..:, %.2f, %.2f, %.2f", float(dest_loc.alt),float(inertial_nav.get_position_z_up_cm()),pos_control->get_pos_target_z_cm());
     if (!wp_nav->set_wp_destination_loc(dest_loc)) { //Sitha: get_vector get alt ab_ori (alt + origin_alt)
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();
@@ -1534,9 +1542,11 @@ bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& current_cmd, const
     case MAV_CMD_NAV_WAYPOINT:
     case MAV_CMD_NAV_LOITER_UNLIM:
     case MAV_CMD_NAV_LOITER_TIME: {
-        const Location dest_loc = loc_from_cmd(current_cmd, default_loc);
-        const Location next_dest_loc = loc_from_cmd(next_cmd, dest_loc);
-        // next_dest_loc.set_alt_cm(next_cmd.content.location.alt,Location::AltFrame::ABSOLUTE);
+        Location dest_loc = loc_from_cmd(current_cmd, default_loc); // just check if has alt
+        Location next_dest_loc = loc_from_cmd(next_cmd, dest_loc); //  just check if has alt
+        if(copter.rangefinder_state.enabled and copter.rangefinder_state.alt_healthy and copter.userCode.is_on_rngfnd){
+            //dest_loc.set_alt_cm(copter.userCode.pilot_alt_cm_rng_auto,Location::AltFrame::ABSOLUTE);
+        }
         return wp_nav->set_wp_destination_next_loc(next_dest_loc);
     }
     case MAV_CMD_NAV_SPLINE_WAYPOINT: {

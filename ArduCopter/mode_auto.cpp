@@ -1022,13 +1022,13 @@ void ModeAuto::wp_run()
         }
         float pos_gps_z = inertial_nav.get_position_z_up_cm();
         copter.userCode._alt_transit_to_gps = pos_gps_z;
-        if(motors->armed()){
-            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            if(AP_HAL::millis() - _debug_timer >= 1000){
-                gcs().send_text(MAV_SEVERITY_INFO,"rngfnd: %.2f, %.2f", pos_control->get_pos_target_z_cm(),rngfnd_alt_cm);
-                _debug_timer = 0;
-            }
-        }
+        // if(motors->armed()){
+        //     if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+        //     if(AP_HAL::millis() - _debug_timer >= 1000){
+        //         gcs().send_text(MAV_SEVERITY_INFO,"rngfnd: %.2f, %.2f", pos_control->get_pos_target_z_cm(),rngfnd_alt_cm);
+        //         _debug_timer = 0;
+        //     }
+        // }
        
     }else if(
         (copter.rangefinder_state.enabled == false && copter.rangefinder.has_orientation(ROTATION_PITCH_270)) 
@@ -1057,13 +1057,13 @@ void ModeAuto::wp_run()
         if(copter.userCode.can_switch_to_rngfnd and copter.rangefinder_state.enabled)  gcs().send_text(MAV_SEVERITY_INFO,"gpsCanGoRng: %2.f",pos_control->get_pos_target_z_cm());
         copter.userCode.is_on_rngfnd = false;
 
-        if(motors->armed()){
-            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            if(AP_HAL::millis() - _debug_timer >= 1000){
-                gcs().send_text(MAV_SEVERITY_INFO,"gps: %.2f, %.2f", pos_control->get_pos_target_z_cm(),inertial_nav.get_position_z_up_cm());
-                _debug_timer = 0;
-            }
-        }
+        // if(motors->armed()){
+        //     if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+        //     if(AP_HAL::millis() - _debug_timer >= 1000){
+        //         gcs().send_text(MAV_SEVERITY_INFO,"gps: %.2f, %.2f", pos_control->get_pos_target_z_cm(),inertial_nav.get_position_z_up_cm());
+        //         _debug_timer = 0;
+        //     }
+        // }
         
     }
 
@@ -1459,20 +1459,17 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 
     // get waypoint's location from command and send to wp_nav
     //Sitha: just a conversion if alt 0 return current alt relative frame
-    Location dest_loc = loc_from_cmd(cmd, default_loc);
+    Location dest_loc = loc_from_cmd(cmd, default_loc); // we override this set so this alt is use less for us
     AP_Mission::Mission_Command prev_cmd;
     mission.get_next_nav_cmd(cmd.index-1, prev_cmd);
     AP_Mission::Mission_Command next_cmd;
     mission.get_next_nav_cmd(cmd.index+1, next_cmd);
-    
+    // TODO: use this to set alt base on waypoint cmd so it is not just fixed hight
     // alt here is cm from cmd
     copter.userCode.theta_alt_wp = float(float(cmd.content.location.alt) / float(prev_cmd.content.location.alt));
     copter.userCode.next_theta_alt_wp = float(float(next_cmd.content.location.alt) /float(cmd.content.location.alt));
     copter.userCode.number_switch_to_rngfnd = 0;
-
-    if(copter.rangefinder_state.enabled and copter.rangefinder_state.alt_healthy and copter.userCode.is_on_rngfnd){
-        // dest_loc.set_alt_cm(copter.userCode.pilot_alt_cm_rng_auto,Location::AltFrame::ABSOLUTE);
-    }
+    
     gcs().send_text(MAV_SEVERITY_INFO, "cmdAl,gps,tar..:, %.2f, %.2f, %.2f", float(dest_loc.alt),float(inertial_nav.get_position_z_up_cm()),pos_control->get_pos_target_z_cm());
     if (!wp_nav->set_wp_destination_loc(dest_loc)) { //Sitha: get_vector get alt ab_ori (alt + origin_alt)
         // failure to set destination can only be because of missing terrain data
@@ -1544,9 +1541,7 @@ bool ModeAuto::set_next_wp(const AP_Mission::Mission_Command& current_cmd, const
     case MAV_CMD_NAV_LOITER_TIME: {
         Location dest_loc = loc_from_cmd(current_cmd, default_loc); // just check if has alt
         Location next_dest_loc = loc_from_cmd(next_cmd, dest_loc); //  just check if has alt
-        if(copter.rangefinder_state.enabled and copter.rangefinder_state.alt_healthy and copter.userCode.is_on_rngfnd){
-            //dest_loc.set_alt_cm(copter.userCode.pilot_alt_cm_rng_auto,Location::AltFrame::ABSOLUTE);
-        }
+        // we override this set so this alt is use less for us
         return wp_nav->set_wp_destination_next_loc(next_dest_loc);
     }
     case MAV_CMD_NAV_SPLINE_WAYPOINT: {

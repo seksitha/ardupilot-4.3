@@ -1030,13 +1030,13 @@ void ModeGuided::posvelaccel_control_run()
         }
     }
     
-    if(motors->armed()){
-        if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-        if(AP_HAL::millis() - _debug_timer >= 500){
-            gcs().send_text(MAV_SEVERITY_INFO,"%s_tar:%.2f, pz:%.2f",copter.userCode.guided_used_rngfnd?"rngfnd":"gps",pos_control->get_pos_target_z_cm(), pz);
-            _debug_timer = 0;
-        }
-    }
+    // if(motors->armed()){
+    //     if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+    //     if(AP_HAL::millis() - _debug_timer >= 500){
+    //         gcs().send_text(MAV_SEVERITY_INFO,"%s_tar:%.2f, pz:%.2f",copter.userCode.guided_used_rngfnd?"rngfnd":"gps",pos_control->get_pos_target_z_cm(), pz);
+    //         _debug_timer = 0;
+    //     }
+    // }
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {

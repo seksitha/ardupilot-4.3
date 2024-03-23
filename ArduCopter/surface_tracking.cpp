@@ -89,7 +89,7 @@ bool Copter::SurfaceTracking::get_target_dist_for_logging(float &target_dist) co
 
 float Copter::SurfaceTracking::get_dist_for_logging() const
 {
-    return ((surface == Surface::CEILING) ? copter.rangefinder_up_state.alt_cm : copter.rangefinder_state.alt_cm) * 0.01f;
+    return ((surface == Surface::CEILING) ? copter.rangefinder_up_state.alt_cm : copter.rangefinder_state.terrain_offset_cm) * 0.01f;
 }
 
 // set direction

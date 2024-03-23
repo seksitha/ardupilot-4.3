@@ -726,15 +726,18 @@ bool AP_Arming_Copter::arm(const AP_Arming::Method method, const bool do_arming_
     auto &ahrs = AP::ahrs();
 
     copter.initial_armed_bearing = ahrs.yaw_sensor;
-
-    if (!ahrs.home_is_set()) {
+    Location cur_pos;
+    ahrs.get_location(cur_pos);
+    cur_pos.set_alt_cm(copter.gps.location().alt,Location::AltFrame::ABSOLUTE); 
+    bool ret = ahrs.set_origin(cur_pos);
+    if (!ahrs.home_is_set() && ret) {
         // Reset EKF altitude if home hasn't been set yet (we use EKF altitude as substitute for alt above home)
         ahrs.resetHeightDatum();
         AP::logger().Write_Event(LogEvent::EKF_ALT_RESET);
 
         // we have reset height, so arming height is zero
         copter.arming_altitude_m = 0;
-    } else if (!ahrs.home_is_locked()) {
+    } else if (!ahrs.home_is_locked() && ret) {
         // Reset home position if it has already been set before (but not locked)
         if (!copter.set_home_to_current_location(false)) {
             // ignore failure

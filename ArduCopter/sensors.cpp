@@ -5,7 +5,10 @@ void Copter::read_barometer(void)
 {
     barometer.update();
     int32_t alt = barometer.get_altitude() * 100.0f;
-    baro_alt += (alt - baro_alt) * (0.75f);
+    baro_alt += (alt - baro_alt) * (0.6f);
+
+    /*gps alt is cm no need to convert*/ 
+    gps_alt_filt += (copter.gps.location().alt - gps_alt_filt)* (0.9f);
     motors->set_air_density_ratio(barometer.get_air_density_ratio());
 }
 

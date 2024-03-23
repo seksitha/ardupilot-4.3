@@ -54,10 +54,10 @@ void Copter::Log_Write_Control_Tuning()
         throttle_hover      : motors->get_throttle_hover(),
         desired_alt         : des_alt_m,
         inav_alt            : inertial_nav.get_position_z_up_cm() * 0.01f,
-        baro_alt            : baro_alt,
+        baro_alt            : copter.baro_alt,
         desired_rangefinder_alt : desired_rangefinder_alt,
         rangefinder_alt     : surface_tracking.get_dist_for_logging(),
-        terr_alt            : terr_alt,
+        terr_alt            : (float)copter.gps_alt_filt,
         target_climb_rate   : target_climb_rate_cms,
         climb_rate          : int16_t(inertial_nav.get_velocity_z_up_cms()) // float -> int16_t
     };

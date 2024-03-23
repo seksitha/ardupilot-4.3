@@ -496,6 +496,7 @@ singleton AP::motors() depends APM_BUILD_TYPE(APM_BUILD_ArduPlane)||APM_BUILD_CO
 singleton AP::motors() literal
 singleton AP::motors() rename motors
 singleton AP::motors() method set_frame_string void string
+singleton AP::motors() method get_throttle float
 
 include AP_Common/AP_FWVersion.h
 singleton AP::fwversion() literal

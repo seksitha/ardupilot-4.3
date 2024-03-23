@@ -532,7 +532,7 @@ void ModeRTL::compute_return_target()
     }
 
     // set returned target alt to new target_alt (don't change altitude type)
-    rtl_path.return_target.set_alt_cm(copter.current_loc.alt+g.rtl_altitude, Location::AltFrame::ABOVE_ORIGIN );
+    rtl_path.return_target.set_alt_cm(inertial_nav.get_position_z_up_cm()+g.rtl_altitude, Location::AltFrame::ABOVE_ORIGIN );
 
 #if AP_FENCE_ENABLED
     // ensure not above fence altitude if alt fence is enabled

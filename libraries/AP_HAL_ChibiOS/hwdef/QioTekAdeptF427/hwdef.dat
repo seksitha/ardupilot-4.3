@@ -88,38 +88,32 @@ PC13 FRAM_CS CS SPEED_VERYLOW
 
 # SPI devices
 SPIDEV imu1           SPI1 DEVID1  IMU1_CS      MODE3   2*MHZ    8*MHZ
-#SPIDEV imu2           SPI1 DEVID2  IMU2_CS      MODE3   2*MHZ    8*MHZ
-# SPIDEV imu3           SPI1 DEVID3  IMU3_CS      MODE3   2*MHZ    8*MHZ
-#SPIDEV baro1          SPI1 DEVID2  Baro1_CS     MODE3   5*MHZ    5*MHZ
-#SPIDEV baro2          SPI1 DEVID1  Baro2_CS     MODE3   5*MHZ    5*MHZ
+SPIDEV imu2           SPI1 DEVID2  IMU2_CS      MODE3   2*MHZ    8*MHZ
+#SPIDEV imu3           SPI1 DEVID3  IMU3_CS      MODE3   2*MHZ    8*MHZ
+SPIDEV baro1          SPI1 DEVID2  Baro1_CS     MODE3   5*MHZ    5*MHZ
+SPIDEV baro2          SPI1 DEVID1  Baro2_CS     MODE3   5*MHZ    5*MHZ
 # SPIDEV osd            SPI1 DEVID2  AT7456_CS    MODE0  10*MHZ   10*MHZ
 SPIDEV ramtron        SPI2 DEVID1  FRAM_CS      MODE0   8*MHZ    8*MHZ
 
 # four IMUs, adi16740 is used, then imu3 will be removed
 IMU Invensensev3  SPI:imu1      ROTATION_NONE
-#IMU Invensensev3  SPI:imu2      ROTATION_NONE
-#IMU Invensense    SPI:imu2      ROTATION_PITCH_180
+IMU Invensensev3  SPI:imu2      ROTATION_NONE
+IMU Invensense    SPI:imu2      ROTATION_PITCH_180
 #IMU Invensensev3 SPI:imu3      ROTATION_NONE
 #IMU Invensense   SPI:imu3      ROTATION_PITCH_180
 
 # two Baro sensors
-#BARO DPS280 SPI:baro1
-#BARO DPS280 SPI:baro2
+BARO DPS280 SPI:baro1
+BARO DPS280 SPI:baro2
 define HAL_BARO_ALLOW_INIT_NO_BARO
 
 # define the pins for the microSD card.
-PC8  SDIO_D0  SDIO
-PC9  SDIO_D1  SDIO
-PC10 SDIO_D2  SDIO
-PC11 SDIO_D3  SDIO
-PC12 SDIO_CK  SDIO
-PD2  SDIO_CMD SDIO
-
-# enable FAT filesystem support
-define HAL_OS_FATFS_IO 1
-# now some defines for logging and terrain data files
-define HAL_BOARD_LOG_DIRECTORY "/APM/LOGS"
-define HAL_BOARD_TERRAIN_DIRECTORY "/APM/TERRAIN"
+# PC8  SDIO_D0  SDIO
+# PC9  SDIO_D1  SDIO
+# PC10 SDIO_D2  SDIO
+# PC11 SDIO_D3  SDIO
+# PC12 SDIO_CK  SDIO
+# PD2  SDIO_CMD SDIO
 
 # define the order that I2C buses
 I2C_ORDER I2C1 I2C2
@@ -193,6 +187,12 @@ define HAL_HAVE_SAFETY_SWITCH 1
 PB15 LED_SAFETY OUTPUT
 PB12  SAFETY_IN INPUT PULLDOWN
 PB14  TIM12_CH1 TIM12 ALARM
+
+# enable FAT filesystem support
+# define HAL_OS_FATFS_IO 1
+# now some defines for logging and terrain data files
+# define HAL_BOARD_LOG_DIRECTORY "/APM/LOGS"
+# define HAL_BOARD_TERRAIN_DIRECTORY "/APM/TERRAIN"
 
 # setup for OSD
 #define OSD_ENABLED 0

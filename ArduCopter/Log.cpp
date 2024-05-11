@@ -57,7 +57,7 @@ void Copter::Log_Write_Control_Tuning()
         baro_alt            : copter.baro_alt,
         desired_rangefinder_alt : desired_rangefinder_alt,
         rangefinder_alt     : surface_tracking.get_dist_for_logging(),
-        terr_alt            : (float)copter.gps_alt_filt,
+        terr_alt            : terr_alt > 0 ? terr_alt : (float)copter.gps_alt_filt,
         target_climb_rate   : target_climb_rate_cms,
         climb_rate          : int16_t(inertial_nav.get_velocity_z_up_cms()) // float -> int16_t
     };

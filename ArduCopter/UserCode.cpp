@@ -82,6 +82,7 @@ void Copter::userhook_SlowLoop()
         userCode.takeoff_done = false;
         userCode.pilot_climb_cm_guided = 0;
         userCode.pilot_alt_cm_rng_auto = 0;
+        userCode.loi_after_takeoff = false;
     }
 
     // if(!copter.motors->armed() || copter.get_mode() != 4 /**Loiter*/){
@@ -98,6 +99,16 @@ void Copter::userhook_SlowLoop()
     }
 
     if(arming.is_armed()){ 
+        // check obstacle radar in auto mode
+
+        if(copter.rangefinder.has_orientation(ROTATION_PITCH_270) && copter.rangefinder_state.enabled == false){
+            gcs().send_text(MAV_SEVERITY_NOTICE,"radar 1 off");
+        }
+
+        if(AP::proximity()->sensor_enabled() and RC_Channels::get_radio_in(copter.wp_nav->ch_radar-1) < 1900){
+            gcs().send_text(MAV_SEVERITY_NOTICE,"radar 2 off");
+        }
+
         if(userCode.takeoff_baro_offset == 0){
             userCode.takeoff_baro_offset = copter.baro_alt;
         }

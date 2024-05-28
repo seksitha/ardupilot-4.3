@@ -159,7 +159,5 @@ bool Copter::get_rangefinder_height_interpolated_cm(int32_t& ret) const
         return false;
     }
     ret = rangefinder_state.alt_cm_filt.get();
-    float inertial_alt_cm = inertial_nav.get_position_z_up_cm();
-    ret += inertial_alt_cm - rangefinder_state.inertial_alt_cm;
     return true;
 }

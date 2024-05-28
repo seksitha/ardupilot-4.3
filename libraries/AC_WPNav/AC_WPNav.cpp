@@ -105,6 +105,10 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     AP_GROUPINFO("HAS_OA_RD",   20, AC_WPNav, _has_oaradar , 0),
     AP_GROUPINFO("RADIO_TYPE",   21, AC_WPNav, _radio_type , 10),
     AP_GROUPINFO("YAW_OA",   22, AC_WPNav, _yaw_oa_rate , 150),
+    AP_GROUPINFO("THRUP",   23, AC_WPNav, _speed_up, 3000),
+    AP_GROUPINFO("THRDN",   24, AC_WPNav, _speed_down, 3000),
+    AP_GROUPINFO("AVD_DIST",   25, AC_WPNav, av_dist, 12),
+    AP_GROUPINFO("CH_RADAR",   26, AC_WPNav, ch_radar, 7),
 
     AP_GROUPEND
 };
@@ -596,18 +600,18 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // test with SITL carefull with throttle not come back to 1500
         // limit height 20m up only Test with and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going up
-        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto + ((float)throttle_val/5000);
-        _origin.z += ((float)throttle_val/5000);
-        _destination.z += ((float)throttle_val/5000);
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto + ((float)throttle_val/_speed_up);
+        _origin.z += ((float)throttle_val/_speed_up);
+        _destination.z += ((float)throttle_val/_speed_up);
     }
     // negative throttle
     else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // limit height -10monly
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
-        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = (copter.userCode.pilot_alt_cm_rng_auto - (2000-throttle_val)/3000.f);
-        _origin.z -= (2000-throttle_val)/3000.0f;
-        _destination.z -= (2000-throttle_val)/3000.0f;
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = (copter.userCode.pilot_alt_cm_rng_auto - (2000-throttle_val)/_speed_down);
+        _origin.z -= (2000-throttle_val)/_speed_down;
+        _destination.z -= (2000-throttle_val)/_speed_down;
     }
     // mid stick 
     else if (throttle_val > 1450  && throttle_val < 1510){

@@ -1067,6 +1067,13 @@ void ModeAuto::wp_run()
         
     }
 
+    float prx_ang = 0;
+    float prx_distance = 0;
+    AP::proximity()->get_object_angle_and_distance(0,prx_ang,prx_distance);
+    if(prx_distance > 2.0f and prx_distance < wp_nav->av_dist){
+        copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
+    }
+
     // run waypoint controller
     copter.failsafe_terrain_set_status(wp_nav->update_wpnav()); // =>
 
@@ -1079,13 +1086,27 @@ void ModeAuto::wp_run()
         // roll & pitch from waypoint controller, yaw rate from pilot
         attitude_control->input_thrust_vector_rate_heading(wp_nav->get_thrust_vector(), target_yaw_rate);
     } else {
-        if(mission.get_current_nav_index() >= 4 &&  mission.get_current_nav_index()%2==0) {
-            Location cmd_current = mission.get_current_nav_cmd().content.location;
-            AP_Mission::Mission_Command next_cmd;
-            mission.get_next_nav_cmd(mission.get_current_nav_index()+1, next_cmd);
-            float bearing = cmd_current.get_bearing_to(next_cmd.content.location);
-            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), wrap_360_cd(bearing), auto_yaw.rate_cds());
+        // 
+        if((mission.get_current_nav_index() >= 4 && mission.get_current_nav_index()%2==0) || (copter.userCode.is_on_turned && copter.userCode.turning_timer < 5000)) {
+            copter.userCode.is_on_turned = true;
+            if(copter.userCode.turning_timer_counter <= 0) copter.userCode.turning_timer_counter = AP_HAL::millis();
+            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+            if(AP_HAL::millis() - _debug_timer >= 1000){
+                gcs().send_text(MAV_SEVERITY_INFO, copter.userCode.is_on_turned ? "hit conner %i" : "straight %i", copter.userCode.turning_timer);
+                _debug_timer = 0;
+            }
+            if(mission.get_current_nav_index()%2==0){
+                Location cmd_current = mission.get_current_nav_cmd().content.location;
+                AP_Mission::Mission_Command next_cmd;
+                mission.get_next_nav_cmd(mission.get_current_nav_index()+1, next_cmd);
+                copter.userCode.turn_bearing = cmd_current.get_bearing_to(next_cmd.content.location);
+            }
+            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), wrap_360_cd(copter.userCode.turn_bearing), auto_yaw.rate_cds());
+            copter.userCode.turning_timer = AP_HAL::millis() - copter.userCode.turning_timer_counter;
         }else {
+            copter.userCode.turning_timer = 0;
+            copter.userCode.is_on_turned = false;
+            copter.userCode.turning_timer_counter = 0;
             attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw(), auto_yaw.rate_cds());
         }
     }

@@ -96,6 +96,7 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
 {
     WITH_SEMAPHORE(_sem);
     // benewake Can id = 589826
+    // obstacle 982801 or 982802
     // RFx24 id = 214 new old=200 alt_rada
     const int32_t id = int32_t(frame.id & AP_HAL::CANFrame::MaskExtID);
     #if CONFIG_HAL_BOARD != HAL_BOARD_SITL
@@ -103,7 +104,7 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
             if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
             if(AP_HAL::millis() - _debug_timer >= 1000){
                 if(check_id == 1) gcs().send_text(MAV_SEVERITY_INFO,"no_ext id %.2f",float(id)); //0x00 can_h
-                if(check_id == 2) gcs().send_text(MAV_SEVERITY_INFO," sum %i:%i:%i:%i:%i:%i:%i :ch%i", frame.data[0],frame.data[1],frame.data[2],frame.data[3],frame.data[4],frame.data[5],frame.data[6],frame.data[7]); //0x00 can_h
+                if(check_id == 2) gcs().send_text(MAV_SEVERITY_INFO," data_f %i:%i:%i:%i:%i:%i:%i", frame.data[0],frame.data[1],frame.data[2],frame.data[3],frame.data[4],frame.data[5],frame.data[6]); //0x00 can_h
                 _debug_timer = 0;
             }
         #endif
@@ -127,7 +128,7 @@ bool AP_RangeFinder_Benewake_CAN::handle_frame(AP_HAL::CANFrame &frame)
         dist_cm = (frame.data[3] | frame.data[4]<<8 );
     }else if (id == 200 ||  id == 214 ){ // old radar jiyi
         dist_cm = (frame.data[4]<<8 | frame.data[5]);                  
-    }else if(id == 982801) {
+    }else if(id == 982801 || id == 982802) {
         is_chksum = false; 
         dist_cm = (frame.data[3] | frame.data[2]<<8 );
     }

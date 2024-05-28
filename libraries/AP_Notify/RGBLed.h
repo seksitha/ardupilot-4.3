@@ -87,6 +87,7 @@ private:
 #define RED    4
 #define YELLOW (RED|GREEN)
 #define WHITE (RED|GREEN|BLUE)
+#define PURPLE (BLUE|RED)
 
     const uint32_t sequence_initialising = DEFINE_COLOUR_SEQUENCE_ALTERNATE(RED,BLUE);
     const uint32_t sequence_trim_or_esc = DEFINE_COLOUR_SEQUENCE(RED,BLUE,GREEN,RED,BLUE,GREEN,RED,BLUE,GREEN,BLACK);
@@ -97,7 +98,7 @@ private:
 
     const uint32_t sequence_armed = DEFINE_COLOUR_SEQUENCE_SOLID(GREEN);
     const uint32_t sequence_armed_nogps = DEFINE_COLOUR_SEQUENCE_SOLID(BLUE);
-    const uint32_t sequence_prearm_failing = DEFINE_COLOUR_SEQUENCE(YELLOW,YELLOW,BLACK,BLACK,YELLOW,YELLOW,BLACK,BLACK,BLACK,BLACK);
+    const uint32_t sequence_prearm_failing = DEFINE_COLOUR_SEQUENCE(RED,RED,BLUE,BLUE,RED,RED,RED,BLUE,BLUE,BLUE);
     const uint32_t sequence_disarmed_good_dgps = DEFINE_COLOUR_SEQUENCE_ALTERNATE(GREEN,BLACK);
     const uint32_t sequence_disarmed_good_gps = DEFINE_COLOUR_SEQUENCE_SLOW(GREEN);
     const uint32_t sequence_disarmed_bad_gps = DEFINE_COLOUR_SEQUENCE_SLOW(BLUE);

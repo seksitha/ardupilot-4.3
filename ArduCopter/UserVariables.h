@@ -52,6 +52,12 @@ class UserCode {
         bool alert_empty_tank = false;
         int16_t cmd_16_index = 0;
         bool is_print_break_auto = false;
+        uint16_t turning_timer = 0;
+        bool is_on_turned = false;
+        float turn_bearing = 0;
+        float alt_transit_from_baro = 0;
+        uint32_t turning_timer_counter = 0;
+        bool loi_after_takeoff = false;
         void set_pump_spinner_pwm(bool spray_state);
 };
 

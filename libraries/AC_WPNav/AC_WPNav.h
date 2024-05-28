@@ -224,6 +224,10 @@ public:
     AP_Float    _corect_coordinate_ns;
     AP_Int8     _spray_all;
     AP_Int8     _fast_turn;
+    AP_Float    _speed_up;
+    AP_Float    _speed_down;
+    AP_Int8     av_dist;
+    AP_Int8     ch_radar;
     bool        _flags_change_alt_by_pilot = false;
     float       _pilot_clime_cm = 0.00f;
     float       traveled_distance;

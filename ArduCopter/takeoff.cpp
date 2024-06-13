@@ -212,7 +212,7 @@ void Mode::auto_takeoff_run()
     //     _debug_timer = 0;
     // }
     // run the vertical position controller and set output throttle
-    pos_control->update_z_controller(copter.baro_alt - copter.userCode.takeoff_baro_offset);
+    pos_control->update_z_controller();
 
     // call attitude controller
     if (auto_yaw.mode() == AUTO_YAW_HOLD) {
@@ -253,7 +253,8 @@ void Mode::auto_takeoff_start(float complete_alt_cm, bool terrain_alt)
     auto_takeoff_complete = false;
     // initialise auto_takeoff_no_nav_alt_cm
     auto_takeoff_no_nav_alt_cm = (copter.baro_alt - copter.userCode.takeoff_baro_offset) + g2.wp_navalt_min * 100;
-    auto_takeoff_complete_alt_cm = MAX((g2.wp_navalt_min * 100), auto_takeoff_complete_alt_cm);
+    // if alt gps is negative give max to chose is not ideal
+    // auto_takeoff_complete_alt_cm = MAX(150, auto_takeoff_complete_alt_cm);
     gcs().send_text(MAV_SEVERITY_INFO,"alt_takeoff: %.2f, alt_now:%.2f" ,auto_takeoff_complete_alt_cm , float(copter.baro_alt - copter.userCode.takeoff_baro_offset));
     if ((g2.wp_navalt_min > 0) && (is_disarmed_or_landed() || !motors->get_interlock())) {
         // we are not flying, climb with no navigation to current alt-above-ekf-origin + wp_navalt_min

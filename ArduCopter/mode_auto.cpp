@@ -349,7 +349,8 @@ void ModeAuto::takeoff_start(const Location& dest_loc)
 
     // initialise alt for WP_NAVALT_MIN and set completion alt
     // if gps alt is already higher target alt set alt at current z
-    auto_takeoff_start(dest_loc.alt, false);
+    // Sitha: start auto at alt we take off manually 
+    auto_takeoff_start(inertial_nav.get_position_z_up_cm(), false);
     // set submode
     set_submode(SubMode::TAKEOFF);
 }
@@ -1087,26 +1088,25 @@ void ModeAuto::wp_run()
         attitude_control->input_thrust_vector_rate_heading(wp_nav->get_thrust_vector(), target_yaw_rate);
     } else {
         // 
-        if((mission.get_current_nav_index() >= 4 && mission.get_current_nav_index()%2==0) || (copter.userCode.is_on_turned && copter.userCode.turning_timer < 5000)) {
-            copter.userCode.is_on_turned = true;
-            if(copter.userCode.turning_timer_counter <= 0) copter.userCode.turning_timer_counter = AP_HAL::millis();
-            if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            if(AP_HAL::millis() - _debug_timer >= 1000){
-                gcs().send_text(MAV_SEVERITY_INFO, copter.userCode.is_on_turned ? "hit conner %i" : "straight %i", copter.userCode.turning_timer);
-                _debug_timer = 0;
+        if(wp_nav->get_wp_distance_to_destination() <= wp_nav->turn_dist*100 and mission.get_current_nav_index() > 2) {          
+            if(mission.get_current_nav_index() % 2 != 0){
+                // AP_Mission::Mission_Command first_cmd;
+                // mission.get_next_nav_cmd(mission.get_current_nav_index()+1,first_cmd);
+                // Location cmd_current = first_cmd.content.location;
+                Location cmd_current = mission.get_current_nav_cmd().content.location;//first_cmd.content.location;
+                
+                AP_Mission::Mission_Command second_cmd;
+                mission.get_next_nav_cmd(mission.get_current_nav_index()+2, second_cmd);
+                copter.userCode.turn_bearing = cmd_current.get_bearing_to(second_cmd.content.location);
             }
-            if(mission.get_current_nav_index()%2==0){
-                Location cmd_current = mission.get_current_nav_cmd().content.location;
-                AP_Mission::Mission_Command next_cmd;
-                mission.get_next_nav_cmd(mission.get_current_nav_index()+1, next_cmd);
-                copter.userCode.turn_bearing = cmd_current.get_bearing_to(next_cmd.content.location);
-            }
-            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), wrap_360_cd(copter.userCode.turn_bearing), auto_yaw.rate_cds());
-            copter.userCode.turning_timer = AP_HAL::millis() - copter.userCode.turning_timer_counter;
+            // if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+            // if(AP_HAL::millis() - _debug_timer >= 1000){
+            //     gcs().send_text(MAV_SEVERITY_INFO,"dist: %.2f, %f",wp_nav->get_wp_distance_to_destination(), copter.userCode.turn_bearing);
+            //     _debug_timer = 0;
+            // }          
+            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.turn_bearing , auto_yaw.rate_cds());
+
         }else {
-            copter.userCode.turning_timer = 0;
-            copter.userCode.is_on_turned = false;
-            copter.userCode.turning_timer_counter = 0;
             attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw(), auto_yaw.rate_cds());
         }
     }
@@ -1510,12 +1510,11 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     if(wp_nav->_spray_all){
         if(copter.userCode.cmd_16_index >1) copter.userCode.set_pump_spinner_pwm(true);
     }else{
-        if (copter.userCode.cmd_16_index % 2 == 0 && copter.userCode.cmd_16_index > 1 && mission.state()==1 ) {
+        if (mission.state()==1 && mission.get_current_nav_index() >=3 &&  mission.get_current_nav_index() % 2 != 0 ) {
             copter.userCode.set_pump_spinner_pwm(true);
-            gcs().send_text(MAV_SEVERITY_INFO, "pump on");
-        } 
-        if (copter.userCode.cmd_16_index % 2 != 0 || mission.state()==0)  {
-            gcs().send_text(MAV_SEVERITY_INFO, "pump off");
+            gcs().send_text(MAV_SEVERITY_INFO, "pump on, %i", mission.get_current_nav_index());
+        } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "pump off, %i", mission.get_current_nav_index());
             copter.userCode.set_pump_spinner_pwm(false);
         }
     }

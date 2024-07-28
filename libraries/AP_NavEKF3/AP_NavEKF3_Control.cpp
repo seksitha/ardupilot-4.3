@@ -632,9 +632,9 @@ bool NavEKF3_core::setOriginLLH(const Location &loc)
 bool NavEKF3_core::setOrigin(const Location &loc)
 {
     // if the origin is valid reject setting a new origin
-    // if (validOrigin) {
-    //     return false;
-    // }
+    if (validOrigin) {
+        return false;
+    }
 
     EKF_origin = loc;
     ekfGpsRefHgt = (double)0.01 * (double)EKF_origin.alt;
@@ -643,11 +643,11 @@ bool NavEKF3_core::setOrigin(const Location &loc)
     validOrigin = true;
     GCS_SEND_TEXT(MAV_SEVERITY_INFO, "EKF3 IMU%u origin set",(unsigned)imu_index);
 
-    // if (!frontend->common_origin_valid) {
+    if (!frontend->common_origin_valid) {
         frontend->common_origin_valid = true;
         // put origin in frontend as well to ensure it stays in sync between lanes
         public_origin = EKF_origin;
-    // }
+    }
 
 
     return true;

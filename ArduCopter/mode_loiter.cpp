@@ -156,6 +156,7 @@ void ModeLoiter::run()
         takeoff.do_pilot_takeoff(target_climb_rate);
 
         // run loiter controller
+        // Avoidance is calculated here => calc_desired_velocity(bool avoidance_on = default true) 
         loiter_nav->update();
 
         // call attitude controller
@@ -190,7 +191,7 @@ void ModeLoiter::run()
         attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector(), target_yaw_rate, false);
 
         // get avoidance adjusted climb rate
-        target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
+        // target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // Sitha: We take out surface tracking in Loiter mode.
         // update the vertical offset based on the surface measurement

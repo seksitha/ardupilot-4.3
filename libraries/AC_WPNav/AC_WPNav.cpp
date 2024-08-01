@@ -109,6 +109,8 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     AP_GROUPINFO("THRDN",   24, AC_WPNav, _speed_down, 3000),
     AP_GROUPINFO("AVD_DIST",   25, AC_WPNav, av_dist, 12),
     AP_GROUPINFO("CH_RADAR",   26, AC_WPNav, ch_radar, 7),
+    AP_GROUPINFO("TURN_DIST",   27, AC_WPNav, turn_dist, 10),
+    AP_GROUPINFO("RADAR_ALT",   28, AC_WPNav, min_radar_alt, 230),
 
     AP_GROUPEND
 };
@@ -599,19 +601,21 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     if (throttle_val > 1550 ){
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // test with SITL carefull with throttle not come back to 1500
-        // limit height 20m up only Test with and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going up
         if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto + ((float)throttle_val/_speed_up);
-        _origin.z += ((float)throttle_val/_speed_up);
-        _destination.z += ((float)throttle_val/_speed_up);
+        float alt_up = ((float)throttle_val/_speed_up);
+        _origin.z += alt_up;
+        _destination.z = _origin.z;
     }
     // negative throttle
     else if (throttle_val < 1450  && throttle_val > 1005 /* SITL start at rc 3 1000*/ ){
         if(!_flags_change_alt_by_pilot) _flags_change_alt_by_pilot = true;
         // limit height -10monly
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
-        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = (copter.userCode.pilot_alt_cm_rng_auto - (2000-throttle_val)/_speed_down);
-        _origin.z -= (2000-throttle_val)/_speed_down;
-        _destination.z -= (2000-throttle_val)/_speed_down;
+        
+        float alt_down = (2000-throttle_val)/_speed_down;
+        _origin.z = copter.userCode.is_on_rngfnd ? (_origin.z > min_radar_alt ? _origin.z - alt_down : min_radar_alt) : _origin.z - alt_down;
+        _destination.z = _origin.z;
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto > min_radar_alt ? copter.userCode.pilot_alt_cm_rng_auto - alt_down : min_radar_alt;
     }
     // mid stick 
     else if (throttle_val > 1450  && throttle_val < 1510){
@@ -620,11 +624,30 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         _flags_change_alt_by_pilot = false;
     }
     // convert final_target.z to altitude above the ekf origin
-    
+    // if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+    // if(AP_HAL::millis() - _debug_timer >= 1000){
+    //     gcs().send_text(MAV_SEVERITY_INFO,"min_radar: %f", float(min_radar_alt));
+    //     _debug_timer = 0;
+    // }
 
     // target_pos.z += _pos_control.get_pos_offset_z_cm(); // Sitha: offset with terrain but we don't do this
     target_vel.z += _pos_control.get_vel_offset_z_cms();
     target_accel.z += _pos_control.get_accel_offset_z_cmss();
+   
+    // const Vector3f &desired_vel_3d = _pos_control.get_vel_desired_cms();
+    // Vector3f desired_vel{desired_vel_3d.x,desired_vel_3d.y,0.0f};
+        
+    // // Limit the velocity to prevent fence violations
+    // // TODO: We need to also limit the _desired_accel
+    // AC_Avoid *_avoid = AP::ac_avoid();
+    // if (_avoid != nullptr) {
+    //     Vector3f avoidance_vel_3d{desired_vel.x, desired_vel.y, 0.0f};
+    //     _avoid->adjust_velocity(avoidance_vel_3d, _pos_control.get_pos_xy_p().kP(), 400.0f, _pos_control.get_pos_z_p().kP(), _pos_control.get_max_accel_z_cmss(), dt);
+    //     desired_vel = Vector3f{avoidance_vel_3d.x, avoidance_vel_3d.y,0.0f};
+    // }
+    
+    // target_pos += (desired_vel * dt);
+
 
     // pass new target to the position controller
     _pos_control.set_pos_vel_accel(target_pos.topostype(), target_vel, target_accel);

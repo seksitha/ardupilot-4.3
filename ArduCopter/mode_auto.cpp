@@ -1017,10 +1017,10 @@ void ModeAuto::wp_run()
         alt_source = rngfnd_alt_cm;
         copter.userCode.is_on_rngfnd = true;
         copter.userCode.transit_to_loiter = false;
-        if(rngfnd_alt_cm < 80) {
-            copter.userCode.can_switch_to_rngfnd=false;
-            copter.userCode.is_on_rngfnd = false;
-        }
+        // if(rngfnd_alt_cm < 80) {
+        //     copter.userCode.can_switch_to_rngfnd=false;
+        //     copter.userCode.is_on_rngfnd = false;
+        // }
         float pos_gps_z = inertial_nav.get_position_z_up_cm();
         copter.userCode._alt_transit_to_gps = pos_gps_z;
         // if(motors->armed()){
@@ -1070,9 +1070,18 @@ void ModeAuto::wp_run()
 
     float prx_ang = 0;
     float prx_distance = 0;
+    int32_t alt_rng = copter.rangefinder_state.terrain_offset_cm;
     AP::proximity()->get_object_angle_and_distance(0,prx_ang,prx_distance);
-    if(prx_distance > 2.0f and prx_distance < wp_nav->av_dist){
+    // if(motors->armed()){
+    //     if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
+    //     if(AP_HAL::millis() - _debug_timer >= 1000){
+    //         gcs().send_text(MAV_SEVERITY_INFO,"RC: %i, rng: %.1f, prx: %.1f",RC_Channels::get_radio_in(copter.wp_nav->ch_radar-1), float(alt_rng), prx_distance);
+    //         _debug_timer = 0;
+    //     }
+    // }
+    if(prx_distance > 2.0f and prx_distance < wp_nav->av_dist and RC_Channels::get_radio_in(copter.wp_nav->ch_radar-1) > 1900 && alt_rng > copter.avoid.get_min_alt() * 100.0f){
         copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
+        gcs().send_text(MAV_SEVERITY_NOTICE,"obstacle radar");
     }
 
     // run waypoint controller
@@ -1088,8 +1097,8 @@ void ModeAuto::wp_run()
         attitude_control->input_thrust_vector_rate_heading(wp_nav->get_thrust_vector(), target_yaw_rate);
     } else {
         // 
-        if(wp_nav->get_wp_distance_to_destination() <= wp_nav->turn_dist*100 and mission.get_current_nav_index() > 2) {          
-            if(mission.get_current_nav_index() % 2 != 0){
+        if(wp_nav->get_wp_distance_to_destination() <= ((wp_nav->turn_dist + (mission.get_current_nav_index() == 2 ? 5 : 0 )) *100) and mission.get_current_nav_index() > 1 and mission.get_current_nav_index() != mission.num_commands()-1) {          
+            if(mission.get_current_nav_index() % 2 != 0 || mission.get_current_nav_index() == 2){
                 // AP_Mission::Mission_Command first_cmd;
                 // mission.get_next_nav_cmd(mission.get_current_nav_index()+1,first_cmd);
                 // Location cmd_current = first_cmd.content.location;
@@ -1099,11 +1108,14 @@ void ModeAuto::wp_run()
                 mission.get_next_nav_cmd(mission.get_current_nav_index()+2, second_cmd);
                 copter.userCode.turn_bearing = cmd_current.get_bearing_to(second_cmd.content.location);
             }
+
             // if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            // if(AP_HAL::millis() - _debug_timer >= 1000){
-            //     gcs().send_text(MAV_SEVERITY_INFO,"dist: %.2f, %f",wp_nav->get_wp_distance_to_destination(), copter.userCode.turn_bearing);
+            // if(AP_HAL::millis() - _debug_timer >= 500){
+            //     gcs().send_text(MAV_SEVERITY_INFO,"bearing: %.2f, %f",  copter.userCode.prev_turn_bearing, copter.userCode.turn_bearing);
             //     _debug_timer = 0;
-            // }          
+            //     if(!is_zero(copter.userCode.prev_turn_bearing - copter.userCode.turn_bearing)) copter.userCode.prev_turn_bearing = copter.userCode.turn_bearing;
+            // }
+                      
             attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.turn_bearing , auto_yaw.rate_cds());
 
         }else {
@@ -1202,7 +1214,7 @@ void ModeAuto::loiter_run()
     if(!copter.userCode.transit_to_loiter and copter.userCode.is_on_rngfnd){
         Vector3f wp_des = wp_nav->get_wp_destination();
         wp_des.z = copter.userCode._alt_transit_to_gps;
-         wp_nav->set_wp_destination(wp_des);
+        wp_nav->set_wp_destination(wp_des);
         pos_control->set_pos_target_z_cm(inertial_nav.get_position_z_up_cm());
         copter.userCode.transit_to_loiter = true;
         copter.userCode.is_on_rngfnd = false;
@@ -1216,6 +1228,7 @@ void ModeAuto::loiter_run()
     if(motors->armed()){
         if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
         if(AP_HAL::millis() - _debug_timer >= 1000){
+            copter.set_mode(Mode::Number::LOITER, ModeReason::GCS_COMMAND);
             gcs().send_text(MAV_SEVERITY_INFO,"loirun: %i",switched);
             _debug_timer = 0;
         }
@@ -1491,7 +1504,7 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     copter.userCode.next_theta_alt_wp = float(float(next_cmd.content.location.alt) /float(cmd.content.location.alt));
     copter.userCode.number_switch_to_rngfnd = 0;
     
-    gcs().send_text(MAV_SEVERITY_INFO, "cmdAl,gps,tar..:, %.2f, %.2f, %.2f", float(dest_loc.alt),float(inertial_nav.get_position_z_up_cm()),pos_control->get_pos_target_z_cm());
+    // gcs().send_text(MAV_SEVERITY_INFO, "gps,tar,rng..:, %.2f, %.2f, %.2f",float(inertial_nav.get_position_z_up_cm()),pos_control->get_pos_target_z_cm(),copter.rangefinder_state.terrain_offset_cm);
     if (!wp_nav->set_wp_destination_loc(dest_loc)) { //Sitha: get_vector get alt ab_ori (alt + origin_alt)
         // failure to set destination can only be because of missing terrain data
         copter.failsafe_terrain_on_event();

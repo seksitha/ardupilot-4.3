@@ -58,7 +58,9 @@ class UserCode {
         float alt_transit_from_baro = 0;
         uint32_t turning_timer_counter = 0;
         bool loi_after_takeoff = false;
+        uint8_t three_hz_timer = 0;
         void set_pump_spinner_pwm(bool spray_state);
+        float prev_turn_bearing = 0;
 };
 
 

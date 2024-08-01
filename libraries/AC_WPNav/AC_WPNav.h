@@ -228,6 +228,10 @@ public:
     AP_Float    _speed_down;
     AP_Int8     av_dist;
     AP_Int8     ch_radar;
+    AP_Int8     turn_dist;
+    AP_Int16     min_radar_alt;
+    int32_t     _debug_timer = 0;
+
     bool        _flags_change_alt_by_pilot = false;
     float       _pilot_clime_cm = 0.00f;
     float       traveled_distance;

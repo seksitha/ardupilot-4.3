@@ -1101,7 +1101,15 @@ void ModeAuto::wp_run()
     } else {
         // 
         if( wp_nav->get_wp_distance_to_destination() <= (wp_nav->turn_dist *100) and mission.get_current_nav_index() > 1 and mission.get_current_nav_index() != mission.num_commands()-1 ) {         
-            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.auto_face_back ? copter.userCode.turn_bearing_back : copter.userCode.turn_bearing, auto_yaw.rate_cds());
+            if(mission.get_current_nav_index() % 2 == 1){
+                Location cmd_current_loc = copter.mode_auto.mission.get_current_nav_cmd().content.location;//first_cmd.content.location;        
+                AP_Mission::Mission_Command second_cmd;
+                copter.mode_auto.mission.get_next_nav_cmd(copter.mode_auto.mission.get_current_nav_index()+1, second_cmd);
+                float bearing = cmd_current_loc.get_bearing_to(second_cmd.content.location);
+                attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), bearing , auto_yaw.rate_cds());
+            }else{
+                attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.auto_face_back ? (copter.userCode.turn_bearing_back ) : (copter.userCode.turn_bearing ), auto_yaw.rate_cds());
+            }
         }else {
             if(mission.get_current_nav_index() > 2){
                 attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.auto_face_back ? copter.userCode.turn_bearing : copter.userCode.turn_bearing_back , auto_yaw.rate_cds());

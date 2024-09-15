@@ -110,7 +110,7 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     AP_GROUPINFO("AVD_DIST",   25, AC_WPNav, av_dist, 12),
     AP_GROUPINFO("CH_RADAR",   26, AC_WPNav, ch_radar, 7),
     AP_GROUPINFO("TURN_DIST",   27, AC_WPNav, turn_dist, 10),
-    AP_GROUPINFO("RADAR_ALT",   28, AC_WPNav, min_radar_alt, 230),
+    AP_GROUPINFO("RADAR_ALT",   28, AC_WPNav, min_radar_alt, 165),
 
     AP_GROUPEND
 };
@@ -613,9 +613,9 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
         // test with SITL carefull with throttle not come back to 1500 and next waypoint clime rate is set to 0 and if throttle not 1500 it will keep going down
         
         float alt_down = (2000-throttle_val)/_speed_down;
-        _origin.z = copter.userCode.is_on_rngfnd ? (_origin.z > min_radar_alt ? _origin.z - alt_down : min_radar_alt) : _origin.z - alt_down;
+        _origin.z = copter.userCode.is_on_rngfnd ? (_origin.z > copter.userCode.alt_offset_gps + min_radar_alt ? _origin.z - alt_down : copter.userCode.alt_offset_gps + min_radar_alt) : _origin.z - alt_down;
         _destination.z = _origin.z;
-        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto > min_radar_alt ? copter.userCode.pilot_alt_cm_rng_auto - alt_down : min_radar_alt;
+        if(copter.userCode.is_on_rngfnd)copter.userCode.pilot_alt_cm_rng_auto = copter.userCode.pilot_alt_cm_rng_auto > copter.userCode.alt_offset_gps + min_radar_alt ? copter.userCode.pilot_alt_cm_rng_auto - alt_down : copter.userCode.alt_offset_gps + min_radar_alt;
     }
     // mid stick 
     else if (throttle_val > 1450  && throttle_val < 1510){

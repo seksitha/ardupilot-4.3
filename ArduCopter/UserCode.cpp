@@ -83,11 +83,25 @@ void Copter::userhook_SlowLoop()
         userCode.pilot_climb_cm_guided = 0;
         userCode.pilot_alt_cm_rng_auto = 0;
         userCode.loi_after_takeoff = false;
+        userCode.auto_face_back = false;
+        userCode.last_cmd_id = 0;
+    }
+    // gcs().send_text(MAV_SEVERITY_INFO,"index: %i",copter.mode_auto.mission.get_current_nav_index());
+    if(copter.motors->armed() and copter.get_mode() == 3 /**auto*/ and copter.mode_auto.mission.get_current_nav_index()==2){
+        Location cmd_current_loc = copter.mode_auto.mission.get_current_nav_cmd().content.location;//first_cmd.content.location;        
+        AP_Mission::Mission_Command second_cmd;
+        copter.mode_auto.mission.get_next_nav_cmd(copter.mode_auto.mission.get_current_nav_index()+1, second_cmd);
+        copter.userCode.turn_bearing = cmd_current_loc.get_bearing_to(second_cmd.content.location);
+        
+        AP_Mission::Mission_Command fourth_cmd;
+        copter.mode_auto.mission.get_next_nav_cmd(4, fourth_cmd);
+        Location cmd_loc_2 = fourth_cmd.content.location;
+        AP_Mission::Mission_Command fifth_cmd;
+        copter.mode_auto.mission.get_next_nav_cmd(5, fifth_cmd);
+        copter.userCode.turn_bearing_back = cmd_loc_2.get_bearing_to(fifth_cmd.content.location);
+        gcs().send_text(MAV_SEVERITY_INFO,"bearing1: %.2f, : %.2f", copter.userCode.turn_bearing, copter.userCode.turn_bearing_back);
     }
 
-    // if(!copter.motors->armed() || copter.get_mode() != 4 /**Loiter*/){
-    //     userCode.reset_target_to_gps = false;
-    // }
     if(copter.get_mode() != 4){
         userCode.pilot_climb_cm_guided = 0;
     }
@@ -190,6 +204,12 @@ void Copter::userhook_SlowLoop()
         gcs().send_text(MAV_SEVERITY_INFO, "# Mission Complete");
         userCode.transit_to_loiter = false;
         copter.set_mode(Mode::Number::LOITER, ModeReason::MISSION_END);
+        userCode.auto_face_back = false;
+        userCode.last_cmd_id = 0;
+    }
+    if(mode_auto.mission.state() == 2){
+        userCode.auto_face_back = false;
+        userCode.last_cmd_id = 0;
     }
     // stop spray on RTL when has water
     if(copter.get_mode()==6 && motors->armed()){

@@ -45,6 +45,7 @@ class UserCode {
         bool guided_used_rngfnd = false;
         float yaw_auto = 0;
         float pilot_alt_cm_rng_auto = 0;
+        float alt_offset_gps = 0;
         // bool reset_target_to_gps = false;
         Location mission_breakpoint;
         mavlink_mission_item_int_t current_mission_waypoint_finish_point;
@@ -60,7 +61,9 @@ class UserCode {
         bool loi_after_takeoff = false;
         uint8_t three_hz_timer = 0;
         void set_pump_spinner_pwm(bool spray_state);
-        float prev_turn_bearing = 0;
+        float turn_bearing_back = 0;
+        bool auto_face_back = false;
+        uint16_t last_cmd_id = 0;
 };
 
 

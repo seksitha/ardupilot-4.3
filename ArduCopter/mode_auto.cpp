@@ -1006,11 +1006,12 @@ void ModeAuto::wp_run()
         if( fabsf(copter.userCode._alt_transit_to_rngfnd) > 0){
             // wpnav advance_target_along_track set pos_target_z each loop to pos_origin
             // so we need to modify origin and destination too
-            wp_nav->set_wp_destination_z_cm(copter.userCode._alt_transit_to_rngfnd);
-            wp_nav->set_wp_origin_z_cm(copter.userCode._alt_transit_to_rngfnd);
-            pos_control->set_pos_target_z_cm(copter.userCode._alt_transit_to_rngfnd);
+            float alt_at_rng =  copter.userCode.alt_offset_gps + copter.userCode._alt_transit_to_rngfnd;
+            wp_nav->set_wp_destination_z_cm(alt_at_rng);
+            wp_nav->set_wp_origin_z_cm(alt_at_rng);
+            pos_control->set_pos_target_z_cm(alt_at_rng);
             gcs().send_text(MAV_SEVERITY_INFO,"switch to rngfnd success!" );
-            copter.userCode.pilot_alt_cm_rng_auto = copter.userCode._alt_transit_to_rngfnd;
+            copter.userCode.pilot_alt_cm_rng_auto = alt_at_rng;
             copter.userCode._alt_transit_to_rngfnd = 0;
         }
         
@@ -1054,6 +1055,8 @@ void ModeAuto::wp_run()
             float pos_rngfnd = copter.rangefinder_state.terrain_offset_cm;
             copter.userCode._alt_transit_to_rngfnd = pos_rngfnd;
             copter.userCode.can_switch_to_rngfnd = true;
+            float detha_gps_rng = inertial_nav.get_position_z_up_cm() - pos_rngfnd;
+            copter.userCode.alt_offset_gps =  detha_gps_rng > 0 ? detha_gps_rng : 0;
         }
         if(copter.userCode.can_switch_to_rngfnd and copter.rangefinder_state.enabled)  gcs().send_text(MAV_SEVERITY_INFO,"gpsCanGoRng: %2.f",pos_control->get_pos_target_z_cm());
         copter.userCode.is_on_rngfnd = false;
@@ -1097,29 +1100,14 @@ void ModeAuto::wp_run()
         attitude_control->input_thrust_vector_rate_heading(wp_nav->get_thrust_vector(), target_yaw_rate);
     } else {
         // 
-        if(wp_nav->get_wp_distance_to_destination() <= ((wp_nav->turn_dist + (mission.get_current_nav_index() == 2 ? 5 : 0 )) *100) and mission.get_current_nav_index() > 1 and mission.get_current_nav_index() != mission.num_commands()-1) {          
-            if(mission.get_current_nav_index() % 2 != 0 || mission.get_current_nav_index() == 2){
-                // AP_Mission::Mission_Command first_cmd;
-                // mission.get_next_nav_cmd(mission.get_current_nav_index()+1,first_cmd);
-                // Location cmd_current = first_cmd.content.location;
-                Location cmd_current = mission.get_current_nav_cmd().content.location;//first_cmd.content.location;
-                
-                AP_Mission::Mission_Command second_cmd;
-                mission.get_next_nav_cmd(mission.get_current_nav_index()+2, second_cmd);
-                copter.userCode.turn_bearing = cmd_current.get_bearing_to(second_cmd.content.location);
-            }
-
-            // if( _debug_timer == 0) _debug_timer = AP_HAL::millis();
-            // if(AP_HAL::millis() - _debug_timer >= 500){
-            //     gcs().send_text(MAV_SEVERITY_INFO,"bearing: %.2f, %f",  copter.userCode.prev_turn_bearing, copter.userCode.turn_bearing);
-            //     _debug_timer = 0;
-            //     if(!is_zero(copter.userCode.prev_turn_bearing - copter.userCode.turn_bearing)) copter.userCode.prev_turn_bearing = copter.userCode.turn_bearing;
-            // }
-                      
-            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.turn_bearing , auto_yaw.rate_cds());
-
+        if( wp_nav->get_wp_distance_to_destination() <= (wp_nav->turn_dist *100) and mission.get_current_nav_index() > 1 and mission.get_current_nav_index() != mission.num_commands()-1 ) {         
+            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.auto_face_back ? copter.userCode.turn_bearing_back : copter.userCode.turn_bearing, auto_yaw.rate_cds());
         }else {
-            attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw(), auto_yaw.rate_cds());
+            if(mission.get_current_nav_index() > 2){
+                attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), copter.userCode.auto_face_back ? copter.userCode.turn_bearing : copter.userCode.turn_bearing_back , auto_yaw.rate_cds());
+            }else{
+                attitude_control->input_thrust_vector_heading(wp_nav->get_thrust_vector(), auto_yaw.yaw() , auto_yaw.rate_cds());
+            }
         }
     }
 }
@@ -1515,7 +1503,11 @@ void ModeAuto::do_nav_wp(const AP_Mission::Mission_Command& cmd)
     loiter_time = 0;
     // this is the delay, stored in seconds
     loiter_time_max = cmd.p1;
-    
+    if(mission.get_current_nav_index() % 2 == 1 && copter.userCode.last_cmd_id != cmd.index ){
+        copter.userCode.auto_face_back = !copter.userCode.auto_face_back;
+        copter.userCode.last_cmd_id = cmd.index;
+         gcs().send_text(MAV_SEVERITY_INFO, "turn, %i", copter.userCode.auto_face_back);
+    }
     if(!wp_nav->break_auto_by_user_state) {
         copter.userCode.cmd_16_index++; // cmd-16-index is 0 at start so need to pluse one
     }

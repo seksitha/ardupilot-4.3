@@ -115,21 +115,20 @@ void Copter::userhook_SlowLoop()
     if(arming.is_armed()){ 
         // check obstacle radar in auto mode
 
-        if(copter.rangefinder.has_orientation(ROTATION_PITCH_270) && copter.rangefinder_state.enabled == false && userCode.three_hz_timer == 10){
-            gcs().send_text(MAV_SEVERITY_NOTICE,"radar 1 off");
-        }
-
-        if( AP::proximity()->sensor_enabled() and RC_Channels::get_radio_in(copter.wp_nav->ch_radar-1) < 1900 && userCode.three_hz_timer == 10){
-            gcs().send_text(MAV_SEVERITY_NOTICE,"radar 2 off");
+        if(copter.rangefinder.has_orientation(ROTATION_PITCH_270) && AP::proximity()->sensor_enabled() && userCode.three_hz_timer == 10){
+        
+            if((copter.rangefinder_state.enabled == false && copter.rangefinder_state.alt_healthy) || (RC_Channels::get_radio_in(copter.wp_nav->ch_radar-1) < 1900 && copter.rangefinder_state.alt_healthy)){
+                gcs().send_text(MAV_SEVERITY_NOTICE,"radar off");
+                userCode.three_hz_timer=0;
+            }
         }
 
         if(userCode.takeoff_baro_offset == 0){
             userCode.takeoff_baro_offset = copter.baro_alt;
         }
+
         if(userCode.three_hz_timer < 10){
             userCode.three_hz_timer++;
-        }else {
-            userCode.three_hz_timer=0;
         }
 
         if(!userCode.is_home_set){

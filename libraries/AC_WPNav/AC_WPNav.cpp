@@ -177,7 +177,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
     _wp_radius_cm.set_and_save_ifchanged(MAX(_wp_radius_cm, WPNAV_WP_RADIUS_MIN));
 
     // check _wp_speed
-    _wp_speed_cms.set_and_save_ifchanged(MAX(_wp_speed_cms, WPNAV_WP_SPEED_MIN));
+    _wp_speed_cms.set_and_save_ifchanged(MAX(_wp_speed_cms, 3000));
 
     // initialise position controller
     _pos_control.init_z_controller_stopping_point();
@@ -232,6 +232,7 @@ void AC_WPNav::wp_and_spline_init(float speed_cms, Vector3f stopping_point)
 /// set_speed_xy - allows main code to pass target horizontal velocity for wp navigation
 void AC_WPNav::set_speed_xy(float speed_cms)
 {
+     gcs().send_text(MAV_SEVERITY_INFO,"speed:%f",speed_cms);
     // range check target speed and protect against divide by zero
     if (speed_cms >= WPNAV_WP_SPEED_MIN && is_positive(_wp_desired_speed_xy_cms)) {
         // update horizontal velocity speed offset scalar

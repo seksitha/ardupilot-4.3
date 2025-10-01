@@ -99,7 +99,7 @@ void Copter::userhook_SlowLoop()
         AP_Mission::Mission_Command fifth_cmd;
         copter.mode_auto.mission.get_next_nav_cmd(5, fifth_cmd);
         copter.userCode.turn_bearing_back = cmd_loc_2.get_bearing_to(fifth_cmd.content.location);
-        gcs().send_text(MAV_SEVERITY_INFO,"bearing1: %.2f, : %.2f", copter.userCode.turn_bearing, copter.userCode.turn_bearing_back);
+        // gcs().send_text(MAV_SEVERITY_INFO,"bearing1: %.2f, : %.2f", copter.userCode.turn_bearing, copter.userCode.turn_bearing_back);
     }
 
     if(copter.get_mode() != 4){

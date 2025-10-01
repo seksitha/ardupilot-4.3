@@ -47,7 +47,7 @@ const AP_Param::GroupInfo ModeZigZag::var_info[] = {
     // @Description: The direction to move sideways in ZigZag mode
     // @Values: 0:forward, 1:right, 2:backward, 3:left
     // @User: Advanced
-    AP_GROUPINFO("DIRECTION", 5, ModeZigZag, _direction, 0),
+    AP_GROUPINFO("DIRECTION", 5, ModeZigZag, _direction, 1),
 
     // @Param: LINE_NUM
     // @DisplayName: Total number of lines
@@ -67,6 +67,7 @@ ModeZigZag::ModeZigZag(void) : Mode()
 // initialise zigzag controller
 bool ModeZigZag::init(bool ignore_checks)
 {
+    gcs().send_text(MAV_SEVERITY_INFO,"1");
     if (!copter.failsafe.radio) {
         // apply simple mode transform to pilot inputs
         update_simple_mode();
@@ -114,6 +115,7 @@ void ModeZigZag::exit()
 // should be called at 100hz or more
 void ModeZigZag::run()
 {
+    // gcs().send_text(MAV_SEVERITY_INFO,"2");
     // set vertical speed and acceleration limits
     pos_control->set_max_speed_accel_z(-get_pilot_speed_dn(), g.pilot_speed_up, g.pilot_accel_z);
 
@@ -133,10 +135,11 @@ void ModeZigZag::run()
                 if (line_num == ZIGZAG_LINE_INFINITY || line_count < line_num) {
                     if (auto_stage == AutoState::SIDEWAYS) {
                         save_or_move_to_destination((ab_dest_stored == Destination::A) ? Destination::B : Destination::A);
+                        // calculate_next_dest
                     } else {
                         // spray off
                         spray(false);
-                        move_to_side();
+                        move_to_side(); // calculate_side_dest
                     }
                 } else {
                     init_auto();
@@ -158,8 +161,10 @@ void ModeZigZag::run()
 }
 
 // save current position as A or B.  If both A and B have been saved move to the one specified
+// call @ RC_Channel.cpp, case AUX_FUNC::ZIGZAG_SaveWP:
 void ModeZigZag::save_or_move_to_destination(Destination ab_dest)
 {
+    gcs().send_text(MAV_SEVERITY_INFO,"3");
     // get current position as an offset from EKF origin
     const Vector2f curr_pos {inertial_nav.get_position_xy_cm()};
 
@@ -170,12 +175,12 @@ void ModeZigZag::save_or_move_to_destination(Destination ab_dest)
             if (ab_dest == Destination::A) {
                 // store point A
                 dest_A = curr_pos;
-                gcs().send_text(MAV_SEVERITY_INFO, "ZigZag: point A stored");
+                gcs().send_text(MAV_SEVERITY_INFO,"ZigZag: point A x:%f, y:%f",  dest_A[0], dest_A[1]);
                 AP::logger().Write_Event(LogEvent::ZIGZAG_STORE_A);
             } else {
                 // store point B
                 dest_B = curr_pos;
-                gcs().send_text(MAV_SEVERITY_INFO, "ZigZag: point B stored");
+                gcs().send_text(MAV_SEVERITY_INFO, "ZigZag: point B x:%f, y:%f",  dest_B[0], dest_B[1]);
                 AP::logger().Write_Event(LogEvent::ZIGZAG_STORE_B);
             }
             // if both A and B have been stored advance state
@@ -216,6 +221,7 @@ void ModeZigZag::save_or_move_to_destination(Destination ab_dest)
 
 void ModeZigZag::move_to_side()
 {
+    gcs().send_text(MAV_SEVERITY_INFO,"4");
     if (!dest_A.is_zero() && !dest_B.is_zero() && !is_zero((dest_B - dest_A).length_squared())) {
         Vector3f next_dest;
         bool terr_alt;
@@ -392,6 +398,7 @@ void ModeZigZag::manual_control()
 // return true if vehicle is within a small area around the destination
 bool ModeZigZag::reached_destination()
 {
+    // gcs().send_text(MAV_SEVERITY_INFO,"5");
     // check if wp_nav believes it has reached the destination
     if (!wp_nav->reached_wp_destination()) {
         return false;
@@ -469,7 +476,7 @@ bool ModeZigZag::calculate_next_dest(Destination ab_dest, bool use_wpnav_alt, Ve
 // terrain_alt is returned as true if the next_dest should be considered a terrain alt
 bool ModeZigZag::calculate_side_dest(Vector3f& next_dest, bool& terrain_alt) const
 {
-    // calculate vector from A to B
+    // calculate vector from A to B all compare to EKF origin when start is (0,0,0)
     Vector2f AB_diff = dest_B - dest_A;
 
     // calculate a vertical right or left vector for AB from the current yaw direction
@@ -517,8 +524,9 @@ bool ModeZigZag::calculate_side_dest(Vector3f& next_dest, bool& terrain_alt) con
 }
 
 // run zigzag auto feature which is automate both AB and sideways
-void ModeZigZag::run_auto()
+void ModeZigZag::run_auto() // call on rc 6 to high
 {
+    gcs().send_text(MAV_SEVERITY_INFO,"9");
     // exit immediately if we are disabled
     if (!_auto_enabled) {
         return;
